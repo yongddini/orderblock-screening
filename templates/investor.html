@@ -37,6 +37,7 @@
             .control-row { flex-direction: column; align-items: stretch; }
             .btn-group { flex-wrap: wrap; }
             th, td { padding: 10px 8px; font-size: 13px; }
+            table { overflow-x: auto; display: block; }
         }
     </style>
 </head>
@@ -67,58 +68,116 @@
         <div class="date-info" id="date-info">-</div>
         <table>
             <thead>
-                <tr><th>순위</th><th>시장</th><th>종목명</th><th>현재가</th><th>등락율</th><th>순매수액</th></tr>
+                <tr>
+                    <th>순위</th>
+                    <th>시장</th>
+                    <th>종목명</th>
+                    <th>현재가</th>
+                    <th>등락율</th>
+                    <th id="net-amount-header">순매수액</th>
+                    <th id="net-volume-header">순매수량</th>
+                </tr>
             </thead>
             <tbody id="data-tbody">
-                <tr><td colspan="6"><div class="loading"><div class="spinner"></div>데이터 로딩중...</div></td></tr>
+                <tr><td colspan="7"><div class="loading"><div class="spinner"></div>데이터 로딩중...</div></td></tr>
             </tbody>
         </table>
     </div>
     <script>
         let currentInvestor = 'foreign';
         let currentTradeType = 'buy';
+        
         function changeInvestor(type) {
             currentInvestor = type;
             document.querySelectorAll('.control-row:first-child .btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             loadData();
         }
+        
         function changeTradeType(type) {
             currentTradeType = type;
             document.querySelectorAll('.control-row:last-child .btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
+            
+            // 헤더 텍스트 변경
+            const netAmountHeader = document.getElementById('net-amount-header');
+            const netVolumeHeader = document.getElementById('net-volume-header');
+            
+            if (type === 'sell') {
+                netAmountHeader.textContent = '순매도액';
+                netVolumeHeader.textContent = '순매도량';
+            } else {
+                netAmountHeader.textContent = '순매수액';
+                netVolumeHeader.textContent = '순매수량';
+            }
+            
             loadData();
         }
+        
         async function loadData() {
             const tbody = document.getElementById('data-tbody');
-            tbody.innerHTML = '<tr><td colspan="6"><div class="loading"><div class="spinner"></div>데이터 로딩중...</div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11"><div class="loading"><div class="spinner"></div>데이터 로딩중...</div></td></tr>';
+            
             try {
                 const response = await fetch(`/api/investor-trading?investor_type=${currentInvestor}&trade_type=${currentTradeType}`);
                 const data = await response.json();
+                
                 if (!data.success) {
-                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#aaa;">${data.error || '데이터 없음'}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:20px;color:#aaa;">${data.error || '데이터 없음'}</td></tr>`;
                     return;
                 }
+                
                 const dateStr = data.date;
                 document.getElementById('date-info').textContent = `${dateStr.substring(0,4)}-${dateStr.substring(4,6)}-${dateStr.substring(6,8)} 기준`;
+                
                 if (data.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#aaa;">데이터가 없습니다</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#aaa;">데이터가 없습니다</td></tr>';
                     return;
                 }
+                
                 tbody.innerHTML = data.data.map(item => {
+                    // 등락율 색상
                     const changeColor = item.change_percent > 0 ? '#ef5350' : (item.change_percent < 0 ? '#42a5f5' : '#aaa');
                     const changeSign = item.change_percent > 0 ? '+' : '';
+                    
+                    // 순매수/매도 색상
                     const netColor = item.net_amount > 0 ? '#ef5350' : '#42a5f5';
                     const netSign = item.net_amount > 0 ? '+' : '';
-                    const amountInEok = Math.abs(item.net_amount) / 100000000;
-                    const amountText = amountInEok >= 1 ? `${netSign}${amountInEok.toFixed(1)}억` : `${netSign}${(Math.abs(item.net_amount) / 10000).toFixed(0)}만`;
-                    return `<tr><td>${item.rank}</td><td><span class="market-badge market-${item.market}">${item.market}</span></td><td>${item.name}</td><td>${item.current_price.toLocaleString()}원</td><td style="color:${changeColor};font-weight:600;">${changeSign}${item.change_percent.toFixed(2)}%</td><td style="color:${netColor};font-weight:600;">${amountText}</td></tr>`;
+                    
+                    // 금액 포맷팅 함수
+                    const formatAmount = (amount) => {
+                        const absAmount = Math.abs(amount);
+                        const eok = Math.floor(absAmount / 100000000);
+                        const man = Math.round((absAmount % 100000000) / 10000);
+                        
+                        if (eok > 0) {
+                            return man > 0 ? `${eok}억 ${man}만` : `${eok}억`;
+                        } else {
+                            return `${man}만`;
+                        }
+                    };
+                    
+                    // 수량 포맷팅 함수
+                    const formatVolume = (volume) => {
+                        return Math.abs(volume).toLocaleString() + '주';
+                    };
+                    
+                    return `<tr>
+                        <td>${item.rank}</td>
+                        <td><span class="market-badge market-${item.market}">${item.market}</span></td>
+                        <td>${item.name}</td>
+                        <td>${item.current_price.toLocaleString()}원</td>
+                        <td style="color:${changeColor};font-weight:600;">${changeSign}${item.change_percent.toFixed(2)}%</td>
+                        <td style="color:${netColor};font-weight:600;">${netSign}${formatAmount(item.net_amount)}</td>
+                        <td style="color:${netColor};font-weight:600;">${netSign}${formatVolume(item.net_volume)}</td>
+                    </tr>`;
                 }).join('');
             } catch (error) {
                 console.error('데이터 로드 오류:', error);
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#ff6b6b;">데이터 로드 실패</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:#ff6b6b;">데이터 로드 실패</td></tr>';
             }
         }
+        
         loadData();
     </script>
 </body>
