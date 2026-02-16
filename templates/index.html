@@ -569,14 +569,12 @@
             }
             
             /* 모바일에서 일부 컬럼 숨기기 */
-            th:nth-child(5),  /* 시가총액 */
-            td:nth-child(5),
-            th:nth-child(8),  /* OB 상단 */
+            th:nth-child(7),  /* OB 상단 */
+            td:nth-child(7),
+            th:nth-child(8),  /* OB 하단 */
             td:nth-child(8),
-            th:nth-child(9),  /* OB 하단 */
-            td:nth-child(9),
-            th:nth-child(10), /* 거리 */
-            td:nth-child(10) {
+            th:nth-child(9), /* 거리 */
+            td:nth-child(9) {
                 display: none !important;
             }
             
@@ -1013,7 +1011,6 @@
                         <th>코드</th>
                         <th>종목명</th>
                         <th>현재가</th>
-                        <th>시가총액</th>
                         <th>종류</th>
                         <th>위치</th>
                         <th>OB 상단</th>
@@ -1025,7 +1022,7 @@
                 </thead>
                 <tbody id="results-tbody">
                     <tr>
-                        <td colspan="12">
+                        <td colspan="11">
                             <div class="loading">
                                 <div class="spinner"></div>
                                 데이터 로딩 중...
@@ -1142,10 +1139,10 @@
                 
                 if (!data.success) {
                     document.getElementById('results-tbody').innerHTML = `
-                        <tr><td colspan="12">
+                        <tr><td colspan="11">
                             <div class="empty-state">
                                 <h3>선택한 날짜의 스크리닝 결과가 없습니다.</h3>
-                                <p style="color:#888; margin-top:8px;">매일 23:00에 자동 실행됩니다.</p>
+                                <p style="color:#888; margin-top:8px;">매일 20:30에 자동 실행됩니다.</p>
                             </div>
                         </td></tr>
                     `;
@@ -1176,7 +1173,7 @@
             } catch (error) {
                 console.error('데이터 로드 오류:', error);
                 document.getElementById('results-tbody').innerHTML = `
-                    <tr><td colspan="12">
+                    <tr><td colspan="11">
                         <div class="empty-state">
                             <h3>데이터 로드 실패</h3>
                             <p>${error.message}</p>
@@ -1404,7 +1401,7 @@
             
             if (results.length === 0) {
                 tbody.innerHTML = `
-                    <tr><td colspan="12">
+                    <tr><td colspan="11">
                         <div class="empty-state">
                             <h3>조건에 맞는 종목이 없습니다</h3>
                         </div>
@@ -1435,7 +1432,6 @@
                     <td>${r.code}</td>
                     <td>${r.name}</td>
                     <td>${Number(r.current_price).toLocaleString()}원</td>
-                    <td>${Number(r.market_cap).toLocaleString()}</td>
                     <td><span class="status-badge status-${r.zone_type}">${r.zone_type}</span></td>
                     <td><span class="status-badge status-${r.zone_position}">${r.zone_position}</span></td>
                     <td>${Number(r.ob_top).toLocaleString()}원</td>
