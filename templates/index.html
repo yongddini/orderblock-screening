@@ -1,0 +1,1999 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오더블록 스크리닝</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+        }
+        
+        /* 모달 열릴 때 body 스크롤 방지 */
+        body.modal-open {
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #2d2d2d;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #e0e0e0;
+        }
+        
+        .header .date {
+            color: #aaa;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .stat-card .label {
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 8px;
+        }
+        
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 600;
+            color: #4dd0c0;
+        }
+        
+        .filters {
+            background: #2d2d2d;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            overflow-x: auto;
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        
+        .filter-label {
+            font-size: 12px;
+            color: #aaa;
+            font-weight: 500;
+            margin-right: 3px;
+            white-space: nowrap;
+        }
+        
+        .filter-divider {
+            width: 1px;
+            height: 25px;
+            background: #444;
+            margin: 0 5px;
+        }
+        
+        .filter-btn {
+            padding: 6px 12px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #3a3a3a;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        
+        .filter-btn:hover {
+            background: #4a4a4a;
+        }
+        
+        .filter-btn.primary.active {
+            background: #26a69a;
+            color: white;
+            border-color: #4dd0c0;
+        }
+        
+        .filter-btn.secondary.active {
+            background: #42a5f5;
+            color: white;
+            border-color: #42a5f5;
+        }
+        
+        .filter-btn.tertiary.active {
+            background: #ab47bc;
+            color: white;
+            border-color: #ab47bc;
+        }
+        
+        .filter-btn.quaternary.active {
+            background: #ff7043;
+            color: white;
+            border-color: #ff7043;
+        }
+        
+        .refresh-btn {
+            padding: 6px 12px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #3a3a3a;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+        
+        .refresh-btn:hover {
+            background: #4a4a4a;
+        }
+        
+        .results-table {
+            background: #2d2d2d;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background: #3a3a3a;
+        }
+        
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            color: #aaa;
+            border-bottom: 2px solid #444;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #3a3a3a;
+            font-size: 14px;
+            color: #e0e0e0;
+        }
+        
+        tbody tr {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        tbody tr:hover {
+            background: #3a3a3a;
+        }
+        
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-지지 {
+            background: #1b3a2a;
+            color: #4dd0c0;
+        }
+        
+        .status-저항 {
+            background: #3a1b1b;
+            color: #ff6b6b;
+        }
+        
+        .status-내부 {
+            background: #1b2a3a;
+            color: #42a5f5;
+        }
+        
+        .status-근접 {
+            background: #3a3a1b;
+            color: #ffa726;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #2d2d2d;
+            border-radius: 8px;
+            width: 95%;
+            max-width: 1600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .modal-header h2 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #e0e0e0;
+            margin: 0;
+            line-height: 1.3;
+            max-width: calc(100% - 50px);
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #aaa;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+        }
+        
+        .close-btn:hover {
+            color: #fff;
+        }
+        
+        .chart-tab {
+            padding: 10px 20px;
+            background: #2d2d2d;
+            border: 2px solid #3a3a3a;
+            border-bottom: none;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .chart-tab:hover {
+            background: #3a3a3a;
+            color: #e0e0e0;
+        }
+        
+        .chart-tab.active {
+            background: #1e1e1e;
+            border-color: #4dd0c0;
+            color: #4dd0c0;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .stock-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            padding: 12px;
+            background: #3a3a3a;
+            border-radius: 4px;
+        }
+        
+        .info-item .label {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+        
+        .info-item .value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e0e0e0;
+        }
+        
+        #chart-container {
+            width: 100%;
+            height: 700px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #26a69a;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .refresh-btn {
+            background: #26a69a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin-left: auto;
+        }
+        
+        .refresh-btn:hover {
+            background: #2bbbad;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        /* 날짜 선택기 스타일 */
+        #date-selector {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 8px 12px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #3a3a3a;
+            color: #e0e0e0;
+            font-size: 14px;
+            cursor: pointer;
+            color-scheme: dark;
+        }
+        
+        #date-selector::-webkit-calendar-picker-indicator {
+            filter: invert(1) brightness(1.2);
+            cursor: pointer;
+            opacity: 0.9;
+        }
+        
+        #date-selector:hover::-webkit-calendar-picker-indicator {
+            opacity: 1;
+        }
+        
+        label[for="date-selector"] {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: #aaa;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        
+        /* 캘린더 삭제 버튼 숨김 */
+        input[type="date"]::-webkit-clear-button {
+            display: none;
+        }
+        input[type="date"]::-webkit-inner-spin-button {
+            display: none;
+        }
+        
+        /* 탭 스타일 */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3a3a3a;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            bottom: -2px;
+        }
+        
+        .tab:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .tab.active {
+            color: #4dd0c0;
+            border-bottom-color: #4dd0c0;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        
+    
+        /* 모바일 반응형 (768px 이하) */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 18px !important;
+            }
+            
+            .header .date {
+                font-size: 12px !important;
+            }
+            
+            .container {
+                padding: 10px !important;
+            }
+            
+            /* 통계 카드 1열 */
+            .stats {
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 10px !important;
+            }
+            
+            /* 추천 종목 캐러셀 1열 */
+            #recommended-carousel > div {
+                grid-template-columns: 1fr !important;
+            }
+            
+            /* 필터 세로 정렬 */
+            .filters {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px !important;
+            }
+            
+            .filter-group {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                width: 100% !important;
+                gap: 6px !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+            }
+            
+            .filter-group::-webkit-scrollbar {
+                display: none !important;
+            }
+            
+            .filter-label {
+                flex-shrink: 0 !important;
+                font-size: 13px !important;
+                margin-right: 8px !important;
+            }
+            
+            .filter-divider {
+                display: none !important;
+            }
+            
+            .filter-btn {
+                flex-shrink: 0 !important;
+                padding: 8px 12px !important;
+                font-size: 12px !important;
+                white-space: nowrap !important;
+            }
+            
+            
+            .header > div > div:last-child {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: flex-end !important;
+                gap: 8px !important;
+            
+            /* 날짜 선택기 */
+            .header > div > div:last-child {
+                justify-content: flex-end !important;
+                gap: 8px !important;
+            }
+            }
+            
+            /* 테이블 수평 스크롤 */
+            .results-table {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            
+            table {
+                min-width: 550px !important;
+            }
+            
+            /* 모바일에서 일부 컬럼 숨기기 */
+            th:nth-child(5),  /* 시가총액 */
+            td:nth-child(5),
+            th:nth-child(8),  /* OB 상단 */
+            td:nth-child(8),
+            th:nth-child(9),  /* OB 하단 */
+            td:nth-child(9),
+            th:nth-child(10), /* 거리 */
+            td:nth-child(10) {
+                display: none !important;
+            }
+            
+            th, td {
+                padding: 10px 8px !important;
+                font-size: 16px !important;
+            }
+            
+            /* 종목명 컬럼 2줄 허용 */
+            td:nth-child(3) {
+                white-space: normal !important;
+                line-height: 1.3 !important;
+                max-width: 120px !important;
+                word-break: keep-all !important;
+                overflow-wrap: break-word !important;
+            }
+            
+            /* 다른 컬럼은 1줄 유지 */
+            td:not(:nth-child(3)) {
+                white-space: nowrap !important;
+            }
+            
+            th {
+            }
+            
+            /* 탭 */
+            .tabs {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            
+            .tab {
+                padding: 10px 16px !important;
+                font-size: 14px !important;
+                white-space: nowrap !important;
+            }
+            
+            /* 모달 */
+            .modal-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 100vh !important;
+                border-radius: 0 !important;
+            }
+            
+            .modal-header {
+                padding: 12px 15px !important;
+            }
+            
+            .modal-header h2 {
+                font-size: 18px !important;
+                line-height: 1.2 !important;
+                margin: 0 !important;
+            }
+            
+            /* 모달 헤더 레이아웃 */
+            .modal-header > div {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 8px !important;
+                align-items: flex-start !important;
+                width: 100% !important;
+            }
+            
+            #modal-badges {
+                display: flex !important;
+                gap: 4px !important;
+                flex-wrap: wrap !important;
+            }
+            
+            .modal-body {
+                padding: 15px !important;
+            }
+            
+            /* 종목 정보 */
+            .stock-info {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+            }
+            
+            .info-item {
+                padding: 8px !important;
+            }
+            
+            .info-item .label {
+                font-size: 13px !important;
+            }
+            
+            .info-item .value {
+                font-size: 16px !important;
+            }
+            
+            /* 차트 탭 */
+            .chart-tabs {
+                gap: 5px !important;
+            }
+            
+            .chart-tab {
+                padding: 10px 16px !important;
+                font-size: 14px !important;
+            }
+            
+            /* 차트 높이 */
+            #chart-container {
+                height: 500px !important;
+            }
+            
+            /* 배지 */
+            .status-badge {
+                font-size: 10px !important;
+                padding: 2px 8px !important;
+            }
+            
+            /* 추천 종목 카드 */
+            #recommended-section {
+                margin-bottom: 15px !important;
+            }
+            
+            #recommended-section > div {
+                padding: 15px !important;
+            }
+            
+            #recommended-section h3 {
+                font-size: 16px !important;
+                margin-bottom: 12px !important;
+            }
+            
+            /* 캐러셀 버튼 */
+            #carousel-prev, #carousel-next {
+                width: 35px !important;
+                height: 35px !important;
+                font-size: 18px !important;
+            }
+        }
+        
+        /* 작은 모바일 (480px 이하) */
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 16px !important;
+            }
+            
+            .stat-card .value {
+                font-size: 24px !important;
+            }
+            
+            .filter-btn {
+                font-size: 12px !important;
+                padding: 5px 10px !important;
+            }
+            
+            th, td {
+                padding: 8px 6px !important;
+                font-size: 11px !important;
+            }
+            
+            .stock-info {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+            
+            #chart-container {
+                height: 400px !important;
+            }
+        }
+
+    
+        /* 시장 칼럼 왼쪽 간격 */
+        td:first-child,
+        th:first-child {
+            padding-left: 20px;
+        }
+
+        /* 햄버거 메뉴 버튼 */
+        .menu-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            background: #2d2d2d;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+        
+        .menu-button:hover {
+            background: #3d3d3d;
+        }
+        
+        .menu-button span {
+            width: 24px;
+            height: 3px;
+            background: #4dd0c0;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+        
+        .menu-button.active span:nth-child(1) {
+            transform: rotate(45deg) translate(7px, 7px);
+        }
+        
+        .menu-button.active span:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .menu-button.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -7px);
+        }
+        
+        /* 사이드 메뉴 */
+        .side-menu {
+            position: fixed;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100vh;
+            background: #2d2d2d;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+            z-index: 1000;
+            transition: left 0.3s ease;
+            overflow-y: auto;
+        }
+        
+        .side-menu.active {
+            left: 0;
+        }
+        
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        
+        .menu-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .menu-header {
+            padding: 30px 20px 20px 20px;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        
+        .menu-header h2 {
+            color: #4dd0c0;
+            font-size: 20px;
+            margin: 0;
+        }
+        
+        .menu-items {
+            padding: 10px 0;
+        }
+        
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            color: #e0e0e0;
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        
+        .menu-item:hover {
+            background: rgba(77, 208, 192, 0.1);
+            border-left-color: #4dd0c0;
+        }
+        
+        .menu-item.active {
+            background: rgba(77, 208, 192, 0.15);
+            border-left-color: #4dd0c0;
+            color: #4dd0c0;
+        }
+        
+        .menu-item span:first-child {
+            font-size: 24px;
+            width: 30px;
+            text-align: center;
+        }
+        
+        .menu-item span:last-child {
+            font-size: 15px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <!-- 햄버거 메뉴 버튼 -->
+    <button class="menu-button" onclick="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+    
+    <!-- 메뉴 오버레이 -->
+    <div class="menu-overlay" onclick="toggleMenu()"></div>
+    
+    <!-- 사이드 메뉴 -->
+    <div class="side-menu">
+        <div class="menu-header">
+            <h2>📊 메뉴</h2>
+        </div>
+        <div class="menu-items">
+            <a href="/" class="menu-item active">
+                <span>📈</span>
+                <span>오더블록 스크리닝</span>
+            </a>
+            <a href="/investor" class="menu-item">
+                <span>💰</span>
+                <span>외국인/기관 수급</span>
+            </a>
+        </div>
+    </div>
+    
+    <!-- 헤더 -->
+    <div class="header">
+        <div class="container">
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                    <h1 style="margin: 0; white-space: nowrap;">📊 오더블록 스크리닝</h1>
+                </div>
+                <div class="header-date-row" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                    <div class="date" id="scan-date" style="margin: 0;">-</div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="date" id="date-selector" style="padding: 6px 10px; font-size: 13px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 오늘의 추천 종목 -->
+        <div id="recommended-section" style="margin-bottom: 20px; display: none;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); position: relative;">
+                <h3 style="margin: 0 0 15px 0; color: white; font-size: 18px;">⭐ 오늘의 추천 종목 (<span id="recommended-count">0</span>개)</h3>
+                
+                <!-- 캐러셀 컨테이너 -->
+                <div style="position: relative; overflow: hidden; border-radius: 6px;">
+                    <div id="recommended-carousel" style="display: flex; transition: transform 0.4s ease-in-out;"></div>
+                    
+                    <!-- 이전/다음 버튼 -->
+                    <button id="carousel-prev" onclick="moveCarousel(-1)" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 20px; display: none; z-index: 10;">‹</button>
+                    <button id="carousel-next" onclick="moveCarousel(1)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 20px; display: none; z-index: 10;">›</button>
+                    
+                    <!-- 인디케이터 -->
+                    <div id="carousel-indicators" style="display: flex; justify-content: center; gap: 8px; margin-top: 15px;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 통계 -->
+        <div class="stats" id="stats-container">
+            <div class="stat-card">
+                <div class="label">전체 종목</div>
+                <div class="value" id="stat-total">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">지지</div>
+                <div class="value" id="stat-support">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">저항</div>
+                <div class="value" id="stat-resistance">-</div>
+            </div>
+        </div>
+        
+        <!-- 탭 메뉴 -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('daily')">📈 일봉</button>
+            <button class="tab" onclick="switchTab('weekly')">📊 주봉</button>
+        </div>
+        
+        <!-- 필터 -->
+        <div class="filters">
+            <!-- 검색창 맨 앞 -->
+            <div class="filter-group">
+                <span class="filter-label">검색:</span>
+                <input type="text" id="search-input" placeholder="종목명 또는 코드 검색..." 
+                    style="padding: 8px 12px; border: 1px solid #555; border-radius: 4px; background: #2d2d2d; color: white; font-size: 13px; width: 200px; outline: none;"
+                    onkeyup="filterResults()">
+                <button onclick="document.getElementById('search-input').value=''; filterResults();" 
+                    style="padding: 8px 12px; background: #555; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: 5px;">✕</button>
+            </div>
+            <div class="filter-divider"></div>
+            <div class="filter-group">
+                <span class="filter-label">종류:</span>
+                <button class="filter-btn primary active" data-type="zone_type" data-value="all">전체</button>
+                <button class="filter-btn primary" data-type="zone_type" data-value="지지">지지</button>
+                <button class="filter-btn primary" data-type="zone_type" data-value="저항">저항</button>
+            </div>
+            <div class="filter-divider"></div>
+            <div class="filter-group">
+                <span class="filter-label">위치:</span>
+                <button class="filter-btn secondary active" data-type="zone_position" data-value="all">전체</button>
+                <button class="filter-btn secondary" data-type="zone_position" data-value="내부">내부</button>
+                <button class="filter-btn secondary" data-type="zone_position" data-value="근접">근접</button>
+            </div>
+            <div class="filter-divider"></div>
+            <div class="filter-group">
+                <span class="filter-label">시장:</span>
+                <button class="filter-btn tertiary active" data-type="market" data-value="all">전체</button>
+                <button class="filter-btn tertiary" data-type="market" data-value="KOSPI">KOSPI</button>
+                <button class="filter-btn tertiary" data-type="market" data-value="KOSDAQ">KOSDAQ</button>
+                <button class="filter-btn tertiary" data-type="market" data-value="ETF">ETF</button>
+            </div>
+            <div class="filter-divider"></div>
+            <div class="filter-group">
+                <span class="filter-label">RSI:</span>
+                <button class="filter-btn quaternary active" data-type="rsi" data-value="all">전체</button>
+                <button class="filter-btn quaternary" data-type="rsi" data-value="oversold">과매도(&lt;30)</button>
+                <button class="filter-btn quaternary" data-type="rsi" data-value="overbought">과매수(&gt;70)</button>
+            </div>
+        </div>
+        
+        <!-- 결과 테이블 -->
+        <div class="results-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>시장</th>
+                        <th>코드</th>
+                        <th>종목명</th>
+                        <th>현재가</th>
+                        <th>시가총액</th>
+                        <th>종류</th>
+                        <th>위치</th>
+                        <th>OB 상단</th>
+                        <th>OB 하단</th>
+                        <th>거리</th>
+                        <th>RSI</th>
+                        <th>등락율</th>
+                    </tr>
+                </thead>
+                <tbody id="results-tbody">
+                    <tr>
+                        <td colspan="12">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                데이터 로딩 중...
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- 차트 모달 -->
+    <div class="modal" id="chart-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <h2 id="modal-title">-</h2>
+                    <div id="modal-badges"></div>
+                </div>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="stock-info" id="stock-info">
+                    <!-- 종목 정보 -->
+                </div>
+                
+                <!-- 차트 타임프레임 탭 -->
+                <div class="chart-tabs" style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid #3a3a3a; padding-bottom: 10px;">
+                    <button class="chart-tab active" onclick="switchChartTimeframe('daily')" id="chart-tab-daily">
+                        📈 일봉
+                    </button>
+                    <button class="chart-tab" onclick="switchChartTimeframe('weekly')" id="chart-tab-weekly">
+                        📊 주봉
+                    </button>
+                </div>
+                
+                <div id="chart-container"></div>
+                <div id="chart-loading" style="display: none; text-align: center; padding: 40px; color: #aaa;">
+                    차트 로딩 중...
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let allResults = [];
+        let currentZoneType = 'all';
+        let currentZonePosition = 'all';
+        let currentMarket = 'all';
+        let currentRsi = 'all';
+        let currentTimeframe = 'daily';  // 일봉/주봉 선택 (스크리닝)
+        let selectedDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        let carouselIndex = 0;
+        let carouselItems = [];
+        
+        // 차트 모달용 변수
+        let currentChartCode = '';
+        let currentChartName = '';
+        let currentChartTimeframe = 'daily';  // 차트 타임프레임 (일봉/주봉)
+        
+        // 탭 전환
+        function switchTab(timeframe) {
+            currentTimeframe = timeframe;
+            
+            // 탭 버튼 활성화
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 데이터 다시 로드
+            loadData();
+        }
+        
+        // 날짜 목록 로드
+        async function loadAvailableDates() {
+            try {
+                const response = await fetch('/api/screening/dates');
+                const data = await response.json();
+                
+                if (data.success && data.dates.length > 0) {
+                    const selector = document.getElementById('date-selector');
+                    
+                    // 오늘 날짜까지만 선택 가능
+                    const today = new Date().toISOString().split('T')[0];
+                    selector.max = today;
+                    
+                    // 가장 최근 스크리닝 날짜로 초기화
+                    const latestDate = data.dates[0].date;  // 첫 번째가 최신
+                    selector.value = latestDate;
+                    selectedDate = latestDate;
+                    
+                    // 데이터 자동 로드
+                    loadData();
+                }
+            } catch (error) {
+                console.error('날짜 목록 로드 오류:', error);
+            }
+        }
+        
+        // 날짜 선택 이벤트
+        document.getElementById('date-selector').addEventListener('change', function() {
+            selectedDate = this.value;
+            loadData();
+        });
+        
+        // 데이터 로드
+        async function loadData() {
+            try {
+                // selectedDate는 항상 YYYY-MM-DD 형식, timeframe 추가
+                const url = `/api/screening/${selectedDate}?timeframe=${currentTimeframe}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    document.getElementById('results-tbody').innerHTML = `
+                        <tr><td colspan="12">
+                            <div class="empty-state">
+                                <h3>선택한 날짜의 스크리닝 결과가 없습니다.</h3>
+                                <p style="color:#888; margin-top:8px;">매일 23:00에 자동 실행됩니다.</p>
+                            </div>
+                        </td></tr>
+                    `;
+                    // 통계 초기화
+                    document.getElementById('stat-total').textContent = '-';
+                    document.getElementById('stat-support').textContent = '-';
+                    document.getElementById('stat-resistance').textContent = '-';
+                    // 추천 종목 숨김
+                    document.getElementById('recommended-section').style.display = 'none';
+                    return;
+                }
+                
+                allResults = data.results;
+                
+                // 날짜 표시
+                document.getElementById('scan-date').textContent = 
+                    `스크리닝 일자: ${data.scan_date}`;
+                
+                // 통계 업데이트
+                updateStats(data.stats);
+                
+                // 테이블 업데이트
+                filterResults();
+                
+                // 추천 종목 로드 (선택된 날짜)
+                loadRecommended();
+                
+            } catch (error) {
+                console.error('데이터 로드 오류:', error);
+                document.getElementById('results-tbody').innerHTML = `
+                    <tr><td colspan="12">
+                        <div class="empty-state">
+                            <h3>데이터 로드 실패</h3>
+                            <p>${error.message}</p>
+                        </div>
+                    </td></tr>
+                `;
+            }
+        }
+        
+        // 통계 업데이트
+        function updateStats(stats) {
+            document.getElementById('stat-total').textContent = stats.total;
+            document.getElementById('stat-support').textContent = stats.zone_type['지지'] || 0;
+            document.getElementById('stat-resistance').textContent = stats.zone_type['저항'] || 0;
+        }
+        
+        // 추천 이유 배지 생성
+        function getRecommendationBadges(flag) {
+            const badges = [];
+            
+            if (flag & 1) {  // 기존 기준
+                badges.push('<span style="display: inline-block; background: rgba(255, 193, 7, 0.9); color: #1e1e1e; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-right: 6px;">📉 RSI과매도</span>');
+            }
+            
+            if (flag & 2) {  // 일봉+주봉 지지
+                badges.push('<span style="display: inline-block; background: rgba(156, 39, 176, 0.9); color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-right: 6px;">🔥 이중지지</span>');
+            }
+            
+            return badges.length > 0 
+                ? `<div style="margin-bottom: 10px;">${badges.join('')}</div>` 
+                : '';
+        }
+        
+        // 추천 종목 로드 (캐러셀)
+        async function loadRecommended() {
+            try {
+                const response = await fetch(`/api/screening/recommended?date=${selectedDate}`);
+                const data = await response.json();
+                
+                if (data.success && data.results.length > 0) {
+                    document.getElementById('recommended-section').style.display = 'block';
+                    document.getElementById('recommended-count').textContent = data.count;
+                    
+                    carouselItems = data.results;
+                    carouselIndex = 0;
+                    
+                    const carousel = document.getElementById('recommended-carousel');
+                    carousel.innerHTML = '';
+                    
+                    // 2개씩 묶어서 슬라이드 생성
+                    for (let i = 0; i < data.results.length; i += 2) {
+                        const slide = document.createElement('div');
+                        slide.style.minWidth = '100%';
+                        slide.style.display = 'grid';
+                        slide.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                        slide.style.gap = '15px';
+                        slide.style.padding = '10px';
+                        
+                        // 첫 번째 카드
+                        const r1 = data.results[i];
+                        const obRange1 = r1.ob_top && r1.ob_bottom 
+                            ? `${Number(r1.ob_bottom).toLocaleString()}원 ~ ${Number(r1.ob_top).toLocaleString()}원`
+                            : '-';
+                        
+                        const card1 = `
+                        <div style="background: rgba(255,255,255,0.1); padding: 16px; border-radius: 6px; cursor: pointer;" onclick="showChart('${r1.code}', '${r1.name}', 'daily')">
+                            <div style="margin-bottom: 12px;">
+                                <div>
+                                    <div style="font-size: 20px; font-weight: 700; color: white; margin-bottom: 4px;">${r1.name}</div>
+                                    <div style="font-size: 13px; color: rgba(255,255,255,0.7);">${r1.code} | ${r1.market}</div>
+                                </div>
+                            </div>
+                            
+                            ${getRecommendationBadges(r1.is_recommended)}
+                            
+                            <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 4px; margin-bottom: 10px;">
+                                <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 4px;">현재가</div>
+                                <div style="font-size: 18px; font-weight: 600; color: white;">${Number(r1.current_price).toLocaleString()}원</div>
+                            </div>
+                            
+                            <div style="padding: 12px; background: rgba(38, 166, 154, 0.25); border-radius: 4px; border: 1px solid rgba(38, 166, 154, 0.5);">
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.6); margin-bottom: 4px;">💡 매수추천 가격</div>
+                                <div style="font-size: 15px; font-weight: 600; color: #4dd0c0;">${obRange1}</div>
+                            </div>
+                        </div>
+                        `;
+                        
+                        // 두 번째 카드 (있으면)
+                        let card2 = '';
+                        if (i + 1 < data.results.length) {
+                            const r2 = data.results[i + 1];
+                            const obRange2 = r2.ob_top && r2.ob_bottom 
+                                ? `${Number(r2.ob_bottom).toLocaleString()}원 ~ ${Number(r2.ob_top).toLocaleString()}원`
+                                : '-';
+                            
+                            card2 = `
+                            <div style="background: rgba(255,255,255,0.1); padding: 16px; border-radius: 6px; cursor: pointer;" onclick="showChart('${r2.code}', '${r2.name}', 'daily')">
+                                <div style="margin-bottom: 12px;">
+                                    <div>
+                                        <div style="font-size: 20px; font-weight: 700; color: white; margin-bottom: 4px;">${r2.name}</div>
+                                        <div style="font-size: 13px; color: rgba(255,255,255,0.7);">${r2.code} | ${r2.market}</div>
+                                    </div>
+                                </div>
+                                
+                                ${getRecommendationBadges(r2.is_recommended)}
+                                
+                                <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 4px; margin-bottom: 10px;">
+                                    <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 4px;">현재가</div>
+                                    <div style="font-size: 18px; font-weight: 600; color: white;">${Number(r2.current_price).toLocaleString()}원</div>
+                                </div>
+                                
+                                <div style="padding: 12px; background: rgba(38, 166, 154, 0.25); border-radius: 4px; border: 1px solid rgba(38, 166, 154, 0.5);">
+                                    <div style="font-size: 11px; color: rgba(255,255,255,0.6); margin-bottom: 4px;">💡 매수추천 가격</div>
+                                    <div style="font-size: 15px; font-weight: 600; color: #4dd0c0;">${obRange2}</div>
+                                </div>
+                            </div>
+                            `;
+                        }
+                        
+                        slide.innerHTML = card1 + card2;
+                        carousel.appendChild(slide);
+                    }
+                    
+                    // carouselItems를 슬라이드 수로 조정
+                    carouselItems = Array(Math.ceil(data.results.length / 2)).fill(0);
+                    
+                    if (data.results.length > 1) {
+                        document.getElementById('carousel-prev').style.display = 'block';
+                        document.getElementById('carousel-next').style.display = 'block';
+                    }
+                    
+                    updateCarouselIndicators();
+                } else {
+                    document.getElementById('recommended-section').style.display = 'block';
+                    document.getElementById('recommended-count').textContent = '0';
+                    document.getElementById('carousel-prev').style.display = 'none';
+                    document.getElementById('carousel-next').style.display = 'none';
+                    document.getElementById('recommended-carousel').innerHTML = `
+                        <div style="min-width: 100%; text-align: center; padding: 60px 20px; color: rgba(255,255,255,0.9);">
+                            <div style="font-size: 28px; font-weight: 600; margin-bottom: 12px;">
+                                오늘은 추천할 만한 종목이 안보이네요...
+                            </div>
+                            <div style="font-size: 15px; color: rgba(255,255,255,0.7); line-height: 1.8;">
+                                좋은 기회가 올 때까지 기다리는 것도 투자입니다<br>
+                                내일 다시 확인해보세요 📊
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('carousel-indicators').innerHTML = '';
+                }
+            } catch (error) {
+                console.error('추천 종목 로드 오류:', error);
+                document.getElementById('recommended-section').style.display = 'none';
+            }
+        }
+        
+        function moveCarousel(direction) {
+            carouselIndex += direction;
+            if (carouselIndex < 0) carouselIndex = carouselItems.length - 1;
+            else if (carouselIndex >= carouselItems.length) carouselIndex = 0;
+            
+            document.getElementById('recommended-carousel').style.transform = `translateX(-${carouselIndex * 100}%)`;
+            updateCarouselIndicators();
+        }
+        
+        function updateCarouselIndicators() {
+            const indicators = document.getElementById('carousel-indicators');
+            if (carouselItems.length <= 1) {
+                indicators.innerHTML = '';
+                return;
+            }
+            
+            indicators.innerHTML = carouselItems.map((_, i) => `
+                <div onclick="goToSlide(${i})" style="width: 8px; height: 8px; border-radius: 50%; background: ${i === carouselIndex ? 'white' : 'rgba(255,255,255,0.3)'}; cursor: pointer; transition: all 0.3s;"></div>
+            `).join('');
+        }
+        
+        function goToSlide(index) {
+            carouselIndex = index;
+            document.getElementById('recommended-carousel').style.transform = `translateX(-${carouselIndex * 100}%)`;
+            updateCarouselIndicators();
+        }
+        
+        // 필터링 (4단계: zone_type AND zone_position AND market AND rsi)
+        function filterResults() {
+            let filtered = allResults;
+            
+            // 종류 필터
+            if (currentZoneType !== 'all') {
+                filtered = filtered.filter(r => r.zone_type === currentZoneType);
+            }
+            
+            // 위치 필터
+            if (currentZonePosition !== 'all') {
+                filtered = filtered.filter(r => r.zone_position === currentZonePosition);
+            }
+            
+            // 시장 필터
+            if (currentMarket !== 'all') {
+                filtered = filtered.filter(r => r.market === currentMarket);
+            }
+            
+            // RSI 필터
+            if (currentRsi === 'oversold') {
+                filtered = filtered.filter(r => r.rsi && r.rsi < 30);
+            } else if (currentRsi === 'overbought') {
+                filtered = filtered.filter(r => r.rsi && r.rsi > 70);
+            }
+            
+            // 검색 필터
+            const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+            if (searchTerm) {
+                filtered = filtered.filter(r => 
+                    r.name.toLowerCase().includes(searchTerm) || 
+                    r.code.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            renderTable(filtered);
+        }
+        
+        // 테이블 렌더링
+        function renderTable(results) {
+            const tbody = document.getElementById('results-tbody');
+            
+            if (results.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="12">
+                        <div class="empty-state">
+                            <h3>조건에 맞는 종목이 없습니다</h3>
+                        </div>
+                    </td></tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = results.map(r => {
+                // RSI 색상 코딩
+                let rsiColor = '#e0e0e0';
+                if (r.rsi < 30) rsiColor = '#ef5350';  // 과매도 - 빨강
+                else if (r.rsi > 70) rsiColor = '#26a69a';  // 과매수 - 초록
+                
+                // 등락율 색상 코딩
+                let changeColor = '#e0e0e0';
+                let changeSign = '';
+                if (r.change_percent > 0) {
+                    changeColor = '#ef5350';  // 상승 - 빨강
+                    changeSign = '+';
+                } else if (r.change_percent < 0) {
+                    changeColor = '#42a5f5';  // 하락 - 파랑
+                }
+                
+                return `
+                <tr onclick="showChart('${r.code}', '${r.name}', '${currentTimeframe}')">
+                    <td>${r.market}</td>
+                    <td>${r.code}</td>
+                    <td>${r.name}</td>
+                    <td>${Number(r.current_price).toLocaleString()}원</td>
+                    <td>${Number(r.market_cap).toLocaleString()}</td>
+                    <td><span class="status-badge status-${r.zone_type}">${r.zone_type}</span></td>
+                    <td><span class="status-badge status-${r.zone_position}">${r.zone_position}</span></td>
+                    <td>${Number(r.ob_top).toLocaleString()}원</td>
+                    <td>${Number(r.ob_bottom).toLocaleString()}원</td>
+                    <td>${r.distance_percent > 0 ? r.distance_percent.toFixed(2) + '%' : '내부'}</td>
+                    <td style="color:${rsiColor}; font-weight:600;">${r.rsi ? r.rsi.toFixed(1) : '-'}</td>
+                    <td style="color:${changeColor}; font-weight:600;">${changeSign}${r.change_percent ? r.change_percent.toFixed(2) : '0.00'}%</td>
+                </tr>
+                `;
+            }).join('');
+        }
+        
+        // ECharts 차트 인스턴스
+        let myChart = null;
+        
+        // 차트 타임프레임 전환
+        async function switchChartTimeframe(timeframe) {
+            if (currentChartTimeframe === timeframe) return;
+            
+            currentChartTimeframe = timeframe;
+            
+            // 탭 활성화
+            document.querySelectorAll('.chart-tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById('chart-tab-' + timeframe).classList.add('active');
+            
+            // 차트 다시 로드
+            showChart(currentChartCode, currentChartName, timeframe);
+        }
+        
+        // 차트 표시
+        async function showChart(code, name, sourceTimeframe = 'daily') {
+            currentChartCode = code;
+            currentChartName = name;
+            currentChartTimeframe = sourceTimeframe;
+            
+            const modal = document.getElementById('chart-modal');
+            const title = document.getElementById('modal-title');
+            const container = document.getElementById('chart-container');
+            const chartTabs = document.querySelector('.chart-tabs');
+            
+            title.textContent = `${code} ${name}`;
+            modal.classList.add('active');
+        document.body.classList.add('modal-open');
+            
+            // 탭 표시/숨김 제어
+            if (sourceTimeframe === 'daily' || sourceTimeframe === 'weekly') {
+                chartTabs.style.display = 'none';
+            }
+            
+            // 탭 초기화
+            document.querySelectorAll('.chart-tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById('chart-tab-' + sourceTimeframe).classList.add('active');
+            
+            container.innerHTML = '<div class="loading"><div class="spinner"></div>차트 로딩 중...</div>';
+            
+            try {
+                // 종목 정보 (선택된 날짜로 조회)
+                const infoResponse = await fetch(`/api/stock/${code}?date=${selectedDate}`);
+                const infoData = await infoResponse.json();
+                
+                if (infoData.success) {
+                    const stock = infoData.stock;
+                    
+                    // 배지 추가
+                    const badgesHtml = stock.zone_type && stock.zone_position 
+                        ? `<span class="status-badge status-${stock.zone_type}">${stock.zone_type}</span>
+                           <span class="status-badge status-${stock.zone_position}">${stock.zone_position}</span>`
+                        : '';
+                    document.getElementById('modal-badges').innerHTML = badgesHtml;
+                    
+                    // 등락율 색상
+                    let changeColor = '#e0e0e0';
+                    let changeSign = '';
+                    if (stock.change_percent > 0) {
+                        changeColor = '#ef5350';
+                        changeSign = '+';
+                    } else if (stock.change_percent < 0) {
+                        changeColor = '#42a5f5';
+                    }
+                    
+                    // RSI 색상
+                    let rsiColor = '#e0e0e0';
+                    if (stock.rsi < 30) rsiColor = '#ef5350';
+                    else if (stock.rsi > 70) rsiColor = '#26a69a';
+                    
+                    document.getElementById('stock-info').innerHTML = `
+                        <div class="info-item">
+                            <div class="label">현재가</div>
+                            <div class="value">${Number(stock.current_price).toLocaleString()}원</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">등락율</div>
+                            <div class="value" style="color:${changeColor}">${changeSign}${stock.change_percent ? stock.change_percent.toFixed(2) : '0.00'}%</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">OB 상단</div>
+                            <div class="value">${stock.ob_top ? Number(stock.ob_top).toLocaleString() + '원' : '-'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">OB 하단</div>
+                            <div class="value">${stock.ob_bottom ? Number(stock.ob_bottom).toLocaleString() + '원' : '-'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">거리</div>
+                            <div class="value">${stock.distance_percent > 0 ? stock.distance_percent.toFixed(2) + '%' : '내부'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">RSI</div>
+                            <div class="value" style="color:${rsiColor}">${stock.rsi ? stock.rsi.toFixed(1) : '-'}</div>
+                        </div>
+                    `;
+                }
+                
+                // 차트 데이터
+                const chartApi = currentChartTimeframe === 'weekly'
+                    ? `/api/chart-data-weekly/${code}?date=${selectedDate}`
+                    : `/api/chart-data/${code}?date=${selectedDate}`;
+                
+                const chartResponse = await fetch(chartApi);
+                const result = await chartResponse.json();
+                
+                if (result.success) {
+                    container.innerHTML = '';
+                    container.style.height = '800px';
+                    createEChart(result.data, container);
+                } else {
+                    container.innerHTML = `<div class="empty-state"><h3>${result.message}</h3></div>`;
+                }
+                
+            } catch (error) {
+                console.error('차트 로드 오류:', error);
+                container.innerHTML = `<div class="empty-state"><h3>차트 로드 실패</h3></div>`;
+            }
+        }
+        
+        function createEChart(data, container) {
+            
+            // === 주봉 오더블록 디버깅 ===
+            console.log("📊 === 차트 데이터 디버깅 시작 ===");
+            console.log("1️⃣ 전체 데이터:", data);
+            console.log("2️⃣ 오더블록 데이터:", data.orderblocks);
+            console.log("3️⃣ Bull OB 개수:", data.orderblocks?.bull?.length || 0);
+            console.log("4️⃣ Bear OB 개수:", data.orderblocks?.bear?.length || 0);
+            
+            if (data.orderblocks?.bull?.length > 0) {
+                console.log("5️⃣ 첫 번째 Bull OB:", data.orderblocks.bull[0]);
+                const ob = data.orderblocks.bull[0];
+                if (ob.start_time) {
+                    console.log("   → start_time:", ob.start_time);
+                    console.log("   → 날짜:", new Date(ob.start_time * 1000).toISOString());
+                }
+                if (ob.break_time) {
+                    console.log("   → break_time:", ob.break_time);
+                    console.log("   → 날짜:", new Date(ob.break_time * 1000).toISOString());
+                }
+            }
+            
+            if (data.candles?.length > 0) {
+                console.log("6️⃣ 캔들 개수:", data.candles.length);
+                console.log("   → 첫 캔들:", data.candles[0]);
+                console.log("   → 마지막 캔들:", data.candles[data.candles.length - 1]);
+            }
+            console.log("📊 === 디버깅 끝 ===\n");
+            
+            // 디버깅: 오더블록 데이터 확인
+            
+            // 기존 차트 제거
+            if (myChart) {
+                myChart.dispose();
+                myChart = null;
+            }
+            
+            // ECharts 초기화
+            myChart = echarts.init(container);
+            
+            // 캔들 데이터 변환
+            const dates = data.candles.map(c => {
+                const d = new Date(c.time * 1000);
+                return d.toISOString().split('T')[0];
+            });
+            
+            const ohlc = data.candles.map(c => [c.open, c.close, c.low, c.high]);
+            
+            // 오더블록을 markArea 형태로 변환
+            const bullMarkAreas = [];
+            const bearMarkAreas = [];
+            
+            // Bull 오더블록
+            data.orderblocks.bull.forEach(ob => {
+                if (!ob.start_time) return;
+                
+                const startDate = new Date(ob.start_time * 1000).toISOString().split('T')[0];
+                const endDate = ob.break_time 
+                    ? new Date(ob.break_time * 1000).toISOString().split('T')[0] 
+                    : dates[dates.length - 1];
+                
+                const opacity = ob.breaker ? 0.1 : (ob.combined ? 0.27 : 0.47);
+                const color = ob.breaker ? [117, 117, 117] : [38, 166, 154];
+                
+                bullMarkAreas.push([
+                    {
+                        xAxis: startDate,
+                        yAxis: ob.top,
+                        itemStyle: {
+                            color: `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${opacity})`,
+                            borderColor: `rgb(${color[0]}, ${color[1]}, ${color[2]})`,
+                            borderWidth: 1
+                        }
+                    },
+                    {
+                        xAxis: endDate,
+                        yAxis: ob.bottom
+                    }
+                ]);
+            });
+            
+            console.log("7️⃣ bullMarkAreas 생성 완료:", bullMarkAreas.length, "개");
+            if (bullMarkAreas.length > 0) {
+                console.log("   → 첫 번째:", bullMarkAreas[0]);
+            }
+            
+            // Bear 오더블록
+            data.orderblocks.bear.forEach(ob => {
+                if (!ob.start_time) return;
+                
+                const startDate = new Date(ob.start_time * 1000).toISOString().split('T')[0];
+                const endDate = ob.break_time 
+                    ? new Date(ob.break_time * 1000).toISOString().split('T')[0] 
+                    : dates[dates.length - 1];
+                
+                const opacity = ob.breaker ? 0.1 : (ob.combined ? 0.27 : 0.53);
+                const color = ob.breaker ? [117, 117, 117] : [239, 83, 80];
+                
+                bearMarkAreas.push([
+                    {
+                        xAxis: startDate,
+                        yAxis: ob.top,
+                        itemStyle: {
+                            color: `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${opacity})`,
+                            borderColor: `rgb(${color[0]}, ${color[1]}, ${color[2]})`,
+                            borderWidth: 1
+                        }
+                    },
+                    {
+                        xAxis: endDate,
+                        yAxis: ob.bottom
+                    }
+                ]);
+            });
+            
+            console.log("8️⃣ bearMarkAreas 생성 완료:", bearMarkAreas.length, "개");
+            if (bearMarkAreas.length > 0) {
+                console.log("   → 첫 번째:", bearMarkAreas[0]);
+            }
+            
+            // RSI 데이터
+            const rsiValues = data.rsi.map(r => r.value);
+            const rsiEmaValues = data.rsi_ema.map(r => r.value);
+            
+            const option = {
+                backgroundColor: '#1e1e1e',
+                animation: false,
+                tooltip: {
+                    trigger: 'axis',
+                    // show: true (웹), false는 모바일 롱프레스에서 제어
+                    axisPointer: {
+                        type: 'cross'
+                    },
+                    backgroundColor: 'rgba(50, 50, 50, 0.9)',
+                    borderColor: '#777',
+                    textStyle: {
+                        color: '#fff'
+                    },
+                    position: function (point, params, dom, rect, size) {
+                        // 좌측 상단 고정
+                        return [10, 10];
+                    },
+                    confine: true,
+                    formatter: function (params) {
+                        if (params.length === 0) return '';
+                        const p = params[0];
+                        if (!p.data) return '';
+                        
+                        // 한 줄로 표시
+                        return `날짜: ${p.axisValue} | 시: ${p.data[0]?.toLocaleString() || '-'} 고: ${p.data[3]?.toLocaleString() || '-'} 저: ${p.data[2]?.toLocaleString() || '-'} 종: ${p.data[1]?.toLocaleString() || '-'}`;
+                    }
+                },
+                axisPointer: {
+                    link: [{xAxisIndex: 'all'}]
+                },
+                dataZoom: [
+                    {
+                        type: 'inside',
+                        xAxisIndex: [0, 1],
+                        start: 50,
+                        end: 100,
+                        zoomOnMouseWheel: true,
+                        moveOnMouseMove: true,
+                        moveOnMouseWheel: true,
+                        preventDefaultMouseMove: false,
+                        zoomLock: false,
+                        throttle: 30,
+                        sensitivity: 0.5
+                    },
+                ],
+                grid: [
+                    {
+                        left: 60,
+                        right: 60,
+                        top: 40,
+                        height: '55%',
+                        borderColor: '#3a3a3a'
+                    },
+                    {
+                        left: 60,
+                        right: 60,
+                        top: '70%',
+                        height: '18%',
+                        borderColor: '#3a3a3a'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: dates,
+                        boundaryGap: false,
+                        axisLine: { lineStyle: { color: '#3a3a3a' } },
+                        axisLabel: { color: '#aaa', show: false },
+                        axisTick: { show: false },
+                        splitLine: { lineStyle: { color: '#3a3a3a' } },
+                        min: 'dataMin',
+                        max: 'dataMax'
+                    },
+                    {
+                        type: 'category',
+                        gridIndex: 1,
+                        data: dates,
+                        boundaryGap: false,
+                        axisLine: { lineStyle: { color: '#3a3a3a' } },
+                        axisLabel: { color: '#aaa' },
+                        axisTick: { show: false },
+                        splitLine: { show: false },
+                        min: 'dataMin',
+                        max: 'dataMax'
+                    }
+                ],
+                yAxis: [
+                    {
+                        scale: true,
+                        position: 'right',
+                        axisLine: { lineStyle: { color: '#3a3a3a' } },
+                        axisLabel: { 
+                            color: '#aaa',
+                            formatter: function(value) {
+                                return value.toLocaleString();
+                            }
+                        },
+                        splitLine: { lineStyle: { color: '#3a3a3a' } }
+                    },
+                    {
+                        scale: true,
+                        gridIndex: 1,
+                        position: 'right',
+                        min: 0,
+                        max: 100,
+                        axisLine: { lineStyle: { color: '#3a3a3a' } },
+                        axisLabel: { color: '#aaa' },
+                        splitLine: { lineStyle: { color: '#3a3a3a' } }
+                    }
+                ],
+            
+            
+                series: [
+                    {
+                        name: '가격',
+                        type: 'candlestick',
+                        data: ohlc,
+                        itemStyle: {
+                            color: '#26a69a',
+                            color0: '#ef5350',
+                            borderColor: '#26a69a',
+                            borderColor0: '#ef5350'
+                        },
+                    
+                        markArea: {
+                            silent: true,
+                            data: [...bullMarkAreas, ...bearMarkAreas]
+                        }
+                    },
+                    {
+                        name: 'RSI',
+                        type: 'line',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: rsiValues,
+                        lineStyle: {
+                            color: '#7E57C2',
+                            width: 2
+                        },
+                        showSymbol: false
+                    },
+                    {
+                        name: 'RSI EMA',
+                        type: 'line',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: rsiEmaValues,
+                        lineStyle: {
+                            color: '#FFEB3B',
+                            width: 2
+                        },
+                        showSymbol: false
+                    }
+                ]
+            };
+            
+            // 최종 markArea 확인
+            console.log("9️⃣ 최종 markArea 데이터:");
+            console.log("   → Bull:", bullMarkAreas.length, "개");
+            console.log("   → Bear:", bearMarkAreas.length, "개");
+            console.log("   → 합계:", bullMarkAreas.length + bearMarkAreas.length, "개");
+            
+            myChart.setOption(option);
+            
+
+        // 트레이딩뷰 스타일 터치 동작
+        let longPressTimer = null;
+        let isLongPressMode = false;
+        let chartDom = container;
+        
+        chartDom.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 1) {
+                longPressTimer = setTimeout(() => {
+                    isLongPressMode = true;
+                    // 햅틱 피드백 (지원되는 경우)
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                    // 툴팁 표시 + 드래그 비활성화
+                    myChart.setOption({
+                        tooltip: {
+                            show: true,
+                            position: function() {
+                                return [10, 10]; // 좌측 상단 고정
+                            }
+                        },
+                        dataZoom: [{
+                            type: 'inside',
+                            xAxisIndex: [0, 1],
+                            disabled: true
+                        }]
+                    });
+                }, 500); // 500ms 롱 프레스
+            }
+        }, { passive: true });
+        
+        chartDom.addEventListener('touchmove', function(e) {
+            if (isLongPressMode) {
+                // 롱프레스 모드에서는 드래그 방지
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        chartDom.addEventListener('touchend', function(e) {
+            clearTimeout(longPressTimer);
+            if (isLongPressMode) {
+                isLongPressMode = false;
+                // 툴팁 숨김 + 드래그 다시 활성화
+                myChart.setOption({
+                    tooltip: {
+                        show: false
+                    },
+                    dataZoom: [{
+                        type: 'inside',
+                        xAxisIndex: [0, 1],
+                        disabled: false,
+                        zoomOnMouseWheel: true,
+                        moveOnMouseMove: true,
+                        moveOnMouseWheel: true,
+                        throttle: 30,
+                        sensitivity: 0.5
+                    }]
+                });
+            }
+        }, { passive: true });
+        
+        chartDom.addEventListener('touchcancel', function(e) {
+            clearTimeout(longPressTimer);
+            isLongPressMode = false;
+        }, { passive: true });
+        
+            // 리사이즈
+            const resizeHandler = () => {
+                if (myChart) myChart.resize();
+            };
+            window.removeEventListener('resize', resizeHandler);
+            window.addEventListener('resize', resizeHandler);
+        }
+        
+        // 모달 닫기
+        function closeModal() {
+            document.getElementById('chart-modal').classList.remove('active');
+            document.body.classList.remove('modal-open');
+            if (myChart) {
+                myChart.dispose();
+                myChart = null;
+            }
+        }
+        
+        // 새로고침
+        // 필터 버튼 이벤트
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const filterType = this.dataset.type; // 'zone_type' or 'zone_position'
+                const filterValue = this.dataset.value;
+                
+                // 같은 그룹 내에서만 active 제거
+                document.querySelectorAll(`.filter-btn[data-type="${filterType}"]`).forEach(b => {
+                    b.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                // 필터 값 업데이트
+                if (filterType === 'zone_type') {
+                    currentZoneType = filterValue;
+                } else if (filterType === 'zone_position') {
+                    currentZonePosition = filterValue;
+                } else if (filterType === 'market') {
+                    currentMarket = filterValue;
+                } else if (filterType === 'rsi') {
+                    currentRsi = filterValue;
+                }
+                
+                filterResults();
+            });
+        });
+        
+        // 모달 외부 클릭시 닫기
+        document.getElementById('chart-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+        
+        // 초기 로드
+        loadAvailableDates();
+        loadData();
+        
+        // 햄버거 메뉴 토글
+        function toggleMenu() {
+            const button = document.querySelector('.menu-button');
+            const menu = document.querySelector('.side-menu');
+            const overlay = document.querySelector('.menu-overlay');
+            
+            button.classList.toggle('active');
+            menu.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+    </script>
+</body>
+</html>

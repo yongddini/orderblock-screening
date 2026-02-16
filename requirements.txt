@@ -1,0 +1,10 @@
+Flask==3.0.0
+gunicorn==21.2.0
+pandas==2.1.4
+plotly==5.18.0
+yfinance==0.2.33
+pykrx==1.2.4
+requests==2.32.5
+finance-datareader
+tqdm
+holidays

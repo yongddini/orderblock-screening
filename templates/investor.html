@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>외국인/기관 매매동향</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+        }
+        
+        .header {
+            background: #2d2d2d;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 10px;
+        }
+        
+        .back-link {
+            color: #4dd0c0;
+            text-decoration: none;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .controls {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .control-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .control-label {
+            font-size: 14px;
+            color: #aaa;
+            font-weight: 500;
+            min-width: 80px;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background: #3a3a3a;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background: #4a4a4a;
+        }
+        
+        .btn.active {
+            background: #4dd0c0;
+            color: #1e1e1e;
+            border-color: #4dd0c0;
+        }
+        
+        .date-info {
+            text-align: center;
+            color: #aaa;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #2d2d2d;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        thead {
+            background: #3a3a3a;
+        }
+        
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            color: #aaa;
+            border-bottom: 2px solid #444;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #3a3a3a;
+            font-size: 14px;
+        }
+        
+        tbody tr {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        tbody tr:hover {
+            background: #3a3a3a;
+        }
+        
+        .market-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .market-KOSPI {
+            background: rgba(33, 150, 243, 0.2);
+            color: #42a5f5;
+        }
+        
+        .market-KOSDAQ {
+            background: rgba(76, 175, 80, 0.2);
+            color: #66bb6a;
+        }
+        
+        .market-ETF {
+            background: rgba(156, 39, 176, 0.2);
+            color: #ab47bc;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4dd0c0;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .control-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn-group {
+                flex-wrap: wrap;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>외국인/기관 매매동향</h1>
+            <a href="/" class="back-link">← 오더블록 스크리닝</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="controls">
+            <div class="control-row">
+                <span class="control-label">투자자:</span>
+                <div class="btn-group">
+                    <button class="btn active" onclick="changeInvestor('foreign')">외국인</button>
+                    <button class="btn" onclick="changeInvestor('institution')">기관</button>
+                </div>
+            </div>
+            
+            <div class="control-row">
+                <span class="control-label">매매유형:</span>
+                <div class="btn-group">
+                    <button class="btn active" onclick="changeTradeType('buy')">순매수</button>
+                    <button class="btn" onclick="changeTradeType('sell')">순매도</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="date-info" id="date-info">-</div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>순위</th>
+                    <th>시장</th>
+                    <th>종목명</th>
+                    <th>현재가</th>
+                    <th>등락율</th>
+                    <th>순매수액</th>
+                </tr>
+            </thead>
+            <tbody id="data-tbody">
+                <tr>
+                    <td colspan="6">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            데이터 로딩중...
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        let currentInvestor = 'foreign';
+        let currentTradeType = 'buy';
+        
+        function changeInvestor(type) {
+            currentInvestor = type;
+            
+            document.querySelectorAll('.control-row:first-child .btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            loadData();
+        }
+        
+        function changeTradeType(type) {
+            currentTradeType = type;
+            
+            document.querySelectorAll('.control-row:last-child .btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            loadData();
+        }
+        
+        async function loadData() {
+            const tbody = document.getElementById('data-tbody');
+            tbody.innerHTML = '<tr><td colspan="6"><div class="loading"><div class="spinner"></div>데이터 로딩중...</div></td></tr>';
+            
+            try {
+                const response = await fetch(`/api/investor-trading?investor_type=${currentInvestor}&trade_type=${currentTradeType}`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#aaa;">${data.error || '데이터 없음'}</td></tr>`;
+                    return;
+                }
+                
+                const dateStr = data.date;
+                document.getElementById('date-info').textContent = `${dateStr.substring(0,4)}-${dateStr.substring(4,6)}-${dateStr.substring(6,8)} 기준`;
+                
+                if (data.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#aaa;">데이터가 없습니다</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.data.map(item => {
+                    const changeColor = item.change_percent > 0 ? '#ef5350' : (item.change_percent < 0 ? '#42a5f5' : '#aaa');
+                    const changeSign = item.change_percent > 0 ? '+' : '';
+                    const netColor = item.net_amount > 0 ? '#ef5350' : '#42a5f5';
+                    const netSign = item.net_amount > 0 ? '+' : '';
+                    
+                    const amountInEok = Math.abs(item.net_amount) / 100000000;
+                    const amountText = amountInEok >= 1 
+                        ? `${netSign}${amountInEok.toFixed(1)}억` 
+                        : `${netSign}${(Math.abs(item.net_amount) / 10000).toFixed(0)}만`;
+                    
+                    return `
+                        <tr>
+                            <td>${item.rank}</td>
+                            <td><span class="market-badge market-${item.market}">${item.market}</span></td>
+                            <td>${item.name}</td>
+                            <td>${item.current_price.toLocaleString()}원</td>
+                            <td style="color:${changeColor};font-weight:600;">${changeSign}${item.change_percent.toFixed(2)}%</td>
+                            <td style="color:${netColor};font-weight:600;">${amountText}</td>
+                        </tr>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('데이터 로드 오류:', error);
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#ff6b6b;">데이터 로드 실패</td></tr>';
+            }
+        }
+        
+        loadData();
+    </script>
+</body>
+</html>
