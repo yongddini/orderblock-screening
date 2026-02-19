@@ -142,7 +142,7 @@
                     
                     // 순매수/매도 색상
                     const netColor = item.net_amount > 0 ? '#ef5350' : '#42a5f5';
-                    const netSign = item.net_amount > 0 ? '+' : '';
+                    const netSign = item.net_amount > 0 ? '+' : '-';  // ← 순매도일 때도 - 부호 표시
                     
                     // 금액 포맷팅 함수
                     const formatAmount = (amount) => {
