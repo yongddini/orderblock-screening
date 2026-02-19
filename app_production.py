@@ -941,6 +941,86 @@ def get_available_dates():
         'dates': dates
     })
 
+
+# ==================== Market Indices API ====================
+
+@app.route('/api/market-indices')
+def get_market_indices():
+    """코스피/코스닥 실시간 지수 정보
+    
+    Returns:
+        JSON: {
+            success: bool,
+            kospi: {value, change, change_percent, chart},
+            kosdaq: {value, change, change_percent, chart}
+        }
+    """
+    try:
+        from pykrx import stock
+        from datetime import timedelta
+        
+        today = datetime.now(KST).date()
+        
+        # 최근 30일 데이터 (차트용)
+        start_date = (today - timedelta(days=30)).strftime('%Y%m%d')
+        end_date = today.strftime('%Y%m%d')
+        
+        # 코스피 지수 (1001)
+        kospi_df = stock.get_index_ohlcv(start_date, end_date, "1001")
+        
+        # 코스닥 지수 (2001)
+        kosdaq_df = stock.get_index_ohlcv(start_date, end_date, "2001")
+        
+        if kospi_df is None or len(kospi_df) == 0 or kosdaq_df is None or len(kosdaq_df) == 0:
+            return jsonify({
+                'success': False,
+                'error': 'No market data available'
+            }), 404
+        
+        # 최신 데이터 (오늘)
+        kospi_latest = kospi_df.iloc[-1]
+        kospi_prev = kospi_df.iloc[-2] if len(kospi_df) > 1 else kospi_latest
+        
+        kosdaq_latest = kosdaq_df.iloc[-1]
+        kosdaq_prev = kosdaq_df.iloc[-2] if len(kosdaq_df) > 1 else kosdaq_latest
+        
+        # 변동률 계산
+        kospi_change = kospi_latest['종가'] - kospi_prev['종가']
+        kospi_change_percent = (kospi_change / kospi_prev['종가']) * 100
+        
+        kosdaq_change = kosdaq_latest['종가'] - kosdaq_prev['종가']
+        kosdaq_change_percent = (kosdaq_change / kosdaq_prev['종가']) * 100
+        
+        # 최근 7일 차트 데이터
+        kospi_chart = kospi_df.tail(7)['종가'].tolist()
+        kosdaq_chart = kosdaq_df.tail(7)['종가'].tolist()
+        
+        return jsonify({
+            'success': True,
+            'kospi': {
+                'value': float(kospi_latest['종가']),
+                'change': float(kospi_change),
+                'change_percent': float(kospi_change_percent),
+                'chart': kospi_chart
+            },
+            'kosdaq': {
+                'value': float(kosdaq_latest['종가']),
+                'change': float(kosdaq_change),
+                'change_percent': float(kosdaq_change_percent),
+                'chart': kosdaq_chart
+            }
+        })
+        
+    except Exception as e:
+        print(f"Market indices error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/screening/recommended')
 def get_recommended_stocks():
     """Recommended stocks for selected date"""

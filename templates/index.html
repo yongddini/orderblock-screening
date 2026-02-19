@@ -478,7 +478,30 @@
             display: block;
         }
         
-        
+        .index-change.up {
+            color: #ef5350;
+        }
+
+        .index-change.down {
+            color: #42a5f5;
+        }
+
+        @media (max-width: 768px) {
+            .market-indices {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .index-card {
+                flex: 1;
+                min-width: 0;
+                padding: 10px 12px !important;
+            }
+            
+            .index-value {
+                font-size: 16px !important;
+            }
+        }
     
         /* 모바일 반응형 (768px 이하) */
         @media (max-width: 768px) {
@@ -904,16 +927,42 @@
     
     <!-- 헤더 -->
     <div class="header">
-        <div class="container">
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                <div>
-                    <h1 style="margin: 0; white-space: nowrap;">📊 오더블록 스크리닝</h1>
-                </div>
-                <div class="header-date-row" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-                    <div class="date" id="scan-date" style="margin: 0;">-</div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="date" id="date-selector" style="padding: 6px 10px; font-size: 13px;">
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+            <!-- 왼쪽: 제목 + 스크리닝 일자 + 캘린더 -->
+            <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 250px;">
+                <!-- 제목 -->
+                <h1 style="margin: 0;">📊 오더블록 스크리닝</h1>
+                
+                <!-- 스크리닝 일자 -->
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="date" id="scan-date" style="margin: 0; font-size: 14px; color: #aaa;">
+                        스크리닝 일자: -
                     </div>
+                    
+                    <!-- 캘린더 -->
+                    <div>
+                        <input type="date" id="date-selector" 
+                            style="padding: 8px 12px; font-size: 13px; border: 1px solid #555; border-radius: 6px; background: #2d2d2d; color: #e0e0e0; cursor: pointer;">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 오른쪽: 시장 지수 -->
+            <div class="market-indices" style="display: flex; gap: 15px;">
+                <!-- 코스피 -->
+                <div class="index-card" style="background: rgba(255, 255, 255, 0.05); padding: 12px 16px; border-radius: 8px; min-width: 140px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div class="index-name" style="font-size: 11px; color: #aaa; font-weight: 600; margin-bottom: 4px;">KOSPI</div>
+                    <div class="index-value" style="font-size: 18px; font-weight: 700; color: #e0e0e0; margin-bottom: 2px;" id="kospi-value">-</div>
+                    <div class="index-change" style="font-size: 12px; font-weight: 600;" id="kospi-change">-</div>
+                    <canvas id="kospi-chart" width="80" height="30" style="margin-top: 8px;"></canvas>
+                </div>
+                
+                <!-- 코스닥 -->
+                <div class="index-card" style="background: rgba(255, 255, 255, 0.05); padding: 12px 16px; border-radius: 8px; min-width: 140px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                    <div class="index-name" style="font-size: 11px; color: #aaa; font-weight: 600; margin-bottom: 4px;">KOSDAQ</div>
+                    <div class="index-value" style="font-size: 18px; font-weight: 700; color: #e0e0e0; margin-bottom: 2px;" id="kosdaq-value">-</div>
+                    <div class="index-change" style="font-size: 12px; font-weight: 600;" id="kosdaq-change">-</div>
+                    <canvas id="kosdaq-chart" width="80" height="30" style="margin-top: 8px;"></canvas>
                 </div>
             </div>
         </div>
@@ -1330,6 +1379,114 @@
                 document.getElementById('recommended-section').style.display = 'none';
             }
         }
+
+        // 시장 지수 로드
+        async function loadMarketIndices() {
+            try {
+                const response = await fetch('/api/market-indices');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // 코스피
+                    const kospiValue = document.getElementById('kospi-value');
+                    const kospiChange = document.getElementById('kospi-change');
+                    
+                    if (kospiValue && kospiChange) {
+                        kospiValue.textContent = data.kospi.value.toLocaleString('ko-KR', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        });
+                        
+                        const kospiChangeText = `${data.kospi.change > 0 ? '+' : ''}${data.kospi.change.toFixed(2)} (${data.kospi.change_percent > 0 ? '+' : ''}${data.kospi.change_percent.toFixed(2)}%)`;
+                        kospiChange.textContent = kospiChangeText;
+                        kospiChange.className = 'badge-change mono ' + (data.kospi.change > 0 ? 'up' : 'down');
+                    }
+                    
+                    // 코스닥
+                    const kosdaqValue = document.getElementById('kosdaq-value');
+                    const kosdaqChange = document.getElementById('kosdaq-change');
+                    
+                    if (kosdaqValue && kosdaqChange) {
+                        kosdaqValue.textContent = data.kosdaq.value.toLocaleString('ko-KR', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        });
+                        
+                        const kosdaqChangeText = `${data.kosdaq.change > 0 ? '+' : ''}${data.kosdaq.change.toFixed(2)} (${data.kosdaq.change_percent > 0 ? '+' : ''}${data.kosdaq.change_percent.toFixed(2)}%)`;
+                        kosdaqChange.textContent = kosdaqChangeText;
+                        kosdaqChange.className = 'badge-change mono ' + (data.kosdaq.change > 0 ? 'up' : 'down');
+                    }
+                    
+                    // 미니 차트 그리기 (optional)
+                    drawMiniChart('kospi-chart', data.kospi.chart, data.kospi.change > 0);
+                    drawMiniChart('kosdaq-chart', data.kosdaq.chart, data.kosdaq.change > 0);
+                } else {
+                    console.error('시장 지수 로드 실패:', data.error);
+                }
+            } catch (error) {
+                console.error('시장 지수 로드 오류:', error);
+            }
+        }
+
+        // 미니 차트 그리기 (Canvas 사용)
+        function drawMiniChart(canvasId, data, isPositive) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // 캔버스 초기화
+            ctx.clearRect(0, 0, width, height);
+            
+            if (!data || data.length < 2) return;
+            
+            // 데이터 정규화
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const range = max - min;
+            
+            if (range === 0) return;
+            
+            // 좌표 계산
+            const points = data.map((value, index) => ({
+                x: (index / (data.length - 1)) * width,
+                y: height - ((value - min) / range) * height
+            }));
+            
+            // 선 그리기
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            
+            ctx.strokeStyle = isPositive ? '#FF5252' : '#00C896'; // 상승: 빨강, 하락: 초록
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // 영역 채우기 (그라데이션)
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, isPositive ? 'rgba(255, 82, 82, 0.3)' : 'rgba(0, 200, 150, 0.3)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            ctx.lineTo(width, height);
+            ctx.lineTo(0, height);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
+        }
+
+        // 페이지 로드 시 실행
+        document.addEventListener('DOMContentLoaded', function() {
+            // 초기 로드
+            loadMarketIndices();
+            
+            // 5분마다 자동 갱신
+            setInterval(loadMarketIndices, 5 * 60 * 1000);
+        });
         
         function moveCarousel(direction) {
             carouselIndex += direction;
