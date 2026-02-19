@@ -52,7 +52,17 @@ def run_and_save_screening(target_date=None):
     
     print(f"🔍 {today} 스크리닝 시작...")
     
+    # 일반 주식용 (3%)
     screener_daily = StockScreener(
+        proximity_percent=3.0,
+        swing_length=10,
+        max_atr_mult=2.0,
+        ob_end_method="Wick",
+        combine_obs=True
+    )
+
+    # ETF용 (1%)
+    screener_daily_etf = StockScreener(
         proximity_percent=1.0,
         swing_length=10,
         max_atr_mult=2.0,
@@ -74,14 +84,16 @@ def run_and_save_screening(target_date=None):
     print(f"일봉 스크리닝 시작 (기준일: {end_date_str}, 근접도: 1%)")
     print("="*50)
     
+    # 일반 주식 스크리닝 (3%)
     stock_results_daily = screener_daily.screen_multiple_markets(
         markets=['KOSPI', 'KOSDAQ'],
         top_n=int(os.environ.get('SCREENING_TOP_N', '400')),
         days=500,
         end_date=end_date_str
     )
-    
-    etf_results_daily = screener_daily.screen_etf(
+
+    # ETF 스크리닝 (1%)
+    etf_results_daily = screener_daily_etf.screen_etf(
         top_n=int(os.environ.get('SCREENING_ETF_N', '300')),
         days=500,
         end_date=end_date_str
