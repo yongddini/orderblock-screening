@@ -52,24 +52,13 @@ def run_and_save_screening(target_date=None):
     
     print(f"🔍 {today} 스크리닝 시작...")
     
-    # 일반 주식용 (3%)
     screener_daily = StockScreener(
-        proximity_percent=3.0,
-        swing_length=10,
-        max_atr_mult=2.0,
-        ob_end_method="Wick",
-        combine_obs=True
-    )
-
-    # ETF용 (1%)
-    screener_daily_etf = StockScreener(
         proximity_percent=1.0,
         swing_length=10,
         max_atr_mult=2.0,
         ob_end_method="Wick",
         combine_obs=True
     )
-
     
     screener_weekly = StockScreener(
         proximity_percent=5.0,
@@ -82,19 +71,17 @@ def run_and_save_screening(target_date=None):
     end_date_str = today.strftime('%Y-%m-%d')
     
     print("\n" + "="*50)
-    print(f"일봉 스크리닝 시작 (기준일: {end_date_str}, Stock 근접도: 3%, ETF 근접도: 1%)")
+    print(f"일봉 스크리닝 시작 (기준일: {end_date_str}, 근접도: 1%)")
     print("="*50)
     
-    # 일반 주식 스크리닝 (3%)
     stock_results_daily = screener_daily.screen_multiple_markets(
         markets=['KOSPI', 'KOSDAQ'],
         top_n=int(os.environ.get('SCREENING_TOP_N', '400')),
         days=500,
         end_date=end_date_str
     )
-
-    # ETF 스크리닝 (1%)
-    etf_results_daily = screener_daily_etf.screen_etf(
+    
+    etf_results_daily = screener_daily.screen_etf(
         top_n=int(os.environ.get('SCREENING_ETF_N', '300')),
         days=500,
         end_date=end_date_str
@@ -221,7 +208,7 @@ def run_and_save_investor_data(target_date=None):
         from pykrx import stock
     except ImportError as e:
         print(f"\n❌ pykrx import 실패: {e}")
-        print(f"설치: {sys.executable} -m pip install pykrx --break-system-packages")
+        print(f"설치: {sys.executable} -m pip install pykrx")
         return
     
     if target_date:
@@ -238,9 +225,12 @@ def run_and_save_investor_data(target_date=None):
             
             try:
                 test = stock.get_market_net_purchases_of_equities(
-                    date_str, date_str, "KOSPI", "외국인"
+                    fromdate=date_str,
+                    todate=date_str,
+                    market="KOSPI",
+                    investor="외국인"
                 )
-                if len(test) > 0:
+                if not test.empty:
                     print(f"✅ 최근 영업일: {check_date.strftime('%Y-%m-%d')}")
                     break
             except:
@@ -268,6 +258,9 @@ def run_and_save_investor_data(target_date=None):
             buy_amount INTEGER,
             sell_amount INTEGER,
             net_amount INTEGER,
+            buy_volume INTEGER DEFAULT 0,
+            sell_volume INTEGER DEFAULT 0,
+            net_volume INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -282,101 +275,66 @@ def run_and_save_investor_data(target_date=None):
     conn.close()
     
     try:
-        print("\n🌍 외국인 매매동향 수집 중...")
+        print("\n🌍 외국인/기관 매매동향 수집 중...")
         
-        kospi_foreign = stock.get_market_net_purchases_of_equities(
-            date_str, date_str, "KOSPI", "외국인"
-        )
-        kosdaq_foreign = stock.get_market_net_purchases_of_equities(
-            date_str, date_str, "KOSDAQ", "외국인"
-        )
+        results_data = {}
         
-        # 실제 컬럼명 확인
-        print(f"  🔍 실제 컬럼명: {kospi_foreign.columns.tolist()}")
-        
-        kospi_foreign['market'] = 'KOSPI'
-        kosdaq_foreign['market'] = 'KOSDAQ'
-        
-        foreign_all = pd.concat([kospi_foreign, kosdaq_foreign])
-        
-        # 순매수 관련 컬럼 찾기
-        net_col = None
-        possible_cols = [
-            '순매수거래대금', '순매수', '순매수(거래대금)', 
-            '순매수거래량', '순매수(거래량)', '거래대금'
+        # 외국인, 기관합계 데이터 수집
+        investor_configs = [
+            ('외국인', 'foreign'),
+            ('기관합계', 'institution')  # ✅ '기관' → '기관합계'
         ]
         
-        for col in possible_cols:
-            if col in foreign_all.columns:
-                net_col = col
-                print(f"  ✅ 사용할 컬럼: '{net_col}'")
-                break
-        
-        if net_col is None:
-            print(f"  ❌ 순매수 컬럼을 찾을 수 없음!")
-            print(f"  사용 가능한 전체 컬럼: {foreign_all.columns.tolist()}")
-            # 첫번째 숫자 컬럼 사용
-            for col in foreign_all.columns:
-                if foreign_all[col].dtype in ['int64', 'float64']:
-                    net_col = col
-                    print(f"  ⚠️ 대체 컬럼 사용: '{net_col}'")
-                    break
-        
-        if net_col is None:
-            print("  ❌ 사용 가능한 컬럼이 없습니다")
-            return
-        
-        foreign_buy = foreign_all.nlargest(100, net_col)
-        foreign_sell = foreign_all.nsmallest(100, net_col)
-        
-        print(f"  ✅ 외국인 순매수 상위 {len(foreign_buy)}개")
-        print(f"  ✅ 외국인 순매도 상위 {len(foreign_sell)}개")
-        
-        print("\n🏛️ 기관 매매동향 수집 중...")
-        
-        kospi_inst = stock.get_market_net_purchases_of_equities(
-            date_str, date_str, "KOSPI", "기관"
-        )
-        kosdaq_inst = stock.get_market_net_purchases_of_equities(
-            date_str, date_str, "KOSDAQ", "기관"
-        )
-        
-        kospi_inst['market'] = 'KOSPI'
-        kosdaq_inst['market'] = 'KOSDAQ'
-        
-        institution_all = pd.concat([kospi_inst, kosdaq_inst])
-        institution_buy = institution_all.nlargest(100, net_col)
-        institution_sell = institution_all.nsmallest(100, net_col)
-        
-        print(f"  ✅ 기관 순매수 상위 {len(institution_buy)}개")
-        print(f"  ✅ 기관 순매도 상위 {len(institution_sell)}개")
-        
-        results = {
-            'foreign_buy': foreign_buy,
-            'foreign_sell': foreign_sell,
-            'institution_buy': institution_buy,
-            'institution_sell': institution_sell
-        }
+        for investor_name, investor_type in investor_configs:
+            print(f"\n  📊 {investor_name} 데이터 수집 중...")
+            
+            kospi_df = stock.get_market_net_purchases_of_equities(
+                fromdate=date_str,
+                todate=date_str,
+                market="KOSPI",
+                investor=investor_name
+            )
+            
+            kosdaq_df = stock.get_market_net_purchases_of_equities(
+                fromdate=date_str,
+                todate=date_str,
+                market="KOSDAQ",
+                investor=investor_name
+            )
+            
+            kospi_df['시장'] = 'KOSPI'
+            kosdaq_df['시장'] = 'KOSDAQ'
+            
+            all_df = pd.concat([kospi_df, kosdaq_df])
+            
+            buy_top = all_df.nlargest(100, '순매수거래대금')
+            sell_top = all_df.nsmallest(100, '순매수거래대금')
+            
+            results_data[f'{investor_type}_buy'] = buy_top
+            results_data[f'{investor_type}_sell'] = sell_top
+            
+            print(f"    ✅ {investor_name} 순매수 상위 {len(buy_top)}개")
+            print(f"    ✅ {investor_name} 순매도 상위 {len(sell_top)}개")
         
         conn = sqlite3.connect(DB_PATH)
         saved_count = 0
         
         categories = [
-            ('foreign', 'buy', results['foreign_buy']),
-            ('foreign', 'sell', results['foreign_sell']),
-            ('institution', 'buy', results['institution_buy']),
-            ('institution', 'sell', results['institution_sell'])
+            ('foreign', 'buy', results_data['foreign_buy']),
+            ('foreign', 'sell', results_data['foreign_sell']),
+            ('institution', 'buy', results_data['institution_buy']),
+            ('institution', 'sell', results_data['institution_sell'])
         ]
         
         for investor_type, trade_type, df in categories:
-            if df is None or len(df) == 0:
+            if df is None or df.empty:
                 continue
             
             print(f"\n💰 {investor_type}/{trade_type} 현재가 조회 중...")
             
             for rank, (ticker, row) in enumerate(df.iterrows(), 1):
                 try:
-                    name = stock.get_market_ticker_name(ticker)
+                    name = row.get('종목명', stock.get_market_ticker_name(ticker))
                     
                     try:
                         price_df = stock.get_market_ohlcv_by_date(
@@ -397,18 +355,26 @@ def run_and_save_investor_data(target_date=None):
                         current = 0
                         change = 0
                     
-                    # 컬럼값 안전하게 가져오기
-                    net_amount = int(row.get(net_col, 0))
+                    buy_amount = int(row.get('매수거래대금', 0))
+                    sell_amount = int(row.get('매도거래대금', 0))
+                    net_amount = int(row.get('순매수거래대금', 0))
+                    
+                    # 거래량 추가
+                    buy_volume = int(row.get('매수거래량', 0))
+                    sell_volume = int(row.get('매도거래량', 0))
+                    net_volume = int(row.get('순매수거래량', 0))
                     
                     conn.execute('''
                         INSERT INTO investor_trading 
                         (scan_date, investor_type, trade_type, rank, code, name, market,
-                         current_price, change_percent, buy_amount, sell_amount, net_amount)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         current_price, change_percent, buy_amount, sell_amount, net_amount,
+                         buy_volume, sell_volume, net_volume)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         date_str, investor_type, trade_type, rank, ticker, name,
-                        row.get('market', 'KOSPI'), current, change,
-                        net_amount, 0, net_amount
+                        row.get('시장', 'KOSPI'), current, change,
+                        buy_amount, sell_amount, net_amount,
+                        buy_volume, sell_volume, net_volume
                     ))
                     
                     saved_count += 1
