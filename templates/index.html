@@ -213,27 +213,38 @@
             font-size: 12px;
             font-weight: 500;
         }
-        
+
         .status-지지 {
-            background: #1b3a2a;
-            color: #4dd0c0;
+            background: rgba(8, 153, 129, 0.15);
+            color: var(--chart-success);
         }
-        
+
         .status-저항 {
-            background: #3a1b1b;
-            color: #ff6b6b;
+            background: rgba(242, 54, 69, 0.15);
+            color: var(--chart-danger);
         }
-        
+
         .status-내부 {
-            background: #1b2a3a;
-            color: #42a5f5;
+            background: rgba(41, 98, 255, 0.15);
+            color: var(--chart-accent);
         }
-        
+
         .status-근접 {
-            background: #3a3a1b;
-            color: #ffa726;
+            background: rgba(255, 184, 77, 0.15);
+            color: #FFB84D;
         }
         
+        :root {
+            --chart-bg: #131722;
+            --chart-panel: #1E222D;
+            --chart-border: #2A2E39;
+            --chart-text: #D1D4DC;
+            --chart-text-muted: #787B86;
+            --chart-accent: #2962FF;
+            --chart-success: #089981;
+            --chart-danger: #F23645;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -241,59 +252,87 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            animation: fadeIn 0.2s ease-out;
         }
-        
+
         .modal.active {
             display: flex;
         }
         
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
         .modal-content {
-            background: #2d2d2d;
+            background: var(--chart-bg);
             border-radius: 8px;
             width: 95%;
             max-width: 1600px;
             max-height: 90vh;
             overflow-y: auto;
             position: relative;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
         
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
         .modal-header {
-            padding: 20px;
-            border-bottom: 1px solid #444;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--chart-border);
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
+            background: var(--chart-panel);
         }
-        
+
         .modal-header h2 {
-            font-size: 24px;
-            font-weight: 600;
-            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--chart-text);
             margin: 0;
-            line-height: 1.3;
-            max-width: calc(100% - 50px);
+            letter-spacing: -0.5px;
         }
         .close-btn {
             background: none;
             border: none;
-            font-size: 28px;
+            width: 36px;
+            height: 36px;
+            font-size: 24px;
             cursor: pointer;
-            color: #aaa;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            line-height: 30px;
-            text-align: center;
+            color: var(--chart-text-muted);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
         }
-        
+
         .close-btn:hover {
-            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--chart-text);
         }
-        
+
+        .close-btn:active {
+            transform: scale(0.95);
+        }
+                
         .chart-tab {
             padding: 10px 20px;
             background: #2d2d2d;
@@ -317,60 +356,73 @@
             border-color: #4dd0c0;
             color: #4dd0c0;
         }
-        
+
         .modal-body {
-            padding: 20px;
+            padding: 0;
+            background: var(--chart-bg);
         }
         
+        /* Stock Info Panel (TradingView ticker 스타일) */
         .stock-info {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1px;
+            background: var(--chart-border);
+            border-bottom: 1px solid var(--chart-border);
+            margin: 0;
+            padding: 0;
         }
-        
+
         .info-item {
-            padding: 12px;
-            background: #3a3a3a;
-            border-radius: 4px;
+            background: var(--chart-panel);
+            padding: 12px 16px;
+            border-radius: 0;
         }
-        
+
         .info-item .label {
-            font-size: 14px;
-            color: #aaa;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--chart-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             margin-bottom: 4px;
         }
-        
+
         .info-item .value {
-            font-size: 18px;
-            font-weight: 600;
-            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--chart-text);
+            letter-spacing: -0.3px;
         }
         
         #chart-container {
             width: 100%;
             height: 700px;
         }
-        
+
+        /* Loading State */
         .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 20px;
+            color: var(--chart-text-muted);
         }
-        
+
         .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #26a69a;
-            border-radius: 50%;
             width: 40px;
             height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+            border: 3px solid var(--chart-border);
+            border-top-color: var(--chart-accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
         }
-        
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
         
         .refresh-btn {
@@ -389,17 +441,19 @@
             background: #2bbbad;
         }
         
+        /* Empty State */
         .empty-state {
             text-align: center;
-            padding: 60px 20px;
-            color: #666;
+            padding: 80px 20px;
+            color: var(--chart-text-muted);
         }
-        
+
         .empty-state h3 {
             font-size: 18px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            color: var(--chart-text);
         }
-        
+                
         /* 날짜 선택기 스타일 */
         #date-selector {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -484,6 +538,13 @@
 
         .index-change.down {
             color: #42a5f5;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .stock-info {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
 
         @media (max-width: 768px) {
@@ -661,11 +722,11 @@
                 align-items: flex-start !important;
                 width: 100% !important;
             }
-            
+
             #modal-badges {
-                display: flex !important;
-                gap: 4px !important;
-                flex-wrap: wrap !important;
+                display: inline-flex;
+                gap: 6px;
+                margin-left: 12px;
             }
             
             .modal-body {
@@ -691,24 +752,55 @@
             }
             
             /* 차트 탭 */
-            .chart-tabs {
-                gap: 5px !important;
+           .chart-tabs {
+                display: flex;
+                align-items: center;
+                padding: 12px 20px;
+                background: var(--chart-panel);
+                border-bottom: 1px solid var(--chart-border);
+                gap: 8px;
             }
-            
+
             .chart-tab {
-                padding: 10px 16px !important;
-                font-size: 14px !important;
+                padding: 8px 20px;
+                background: transparent;
+                border: 1px solid var(--chart-border);
+                border-radius: 6px;
+                color: var(--chart-text-muted);
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 600;
+                transition: all 0.2s ease;
             }
-            
-            /* 차트 높이 */
+
+            .chart-tab:hover {
+                background: rgba(255, 255, 255, 0.05);
+                color: var(--chart-text);
+                border-color: var(--chart-text-muted);
+            }
+
+            .chart-tab.active {
+                background: var(--chart-accent);
+                border-color: var(--chart-accent);
+                color: white;
+                box-shadow: 0 2px 8px rgba(41, 98, 255, 0.3);
+            }
+
+            /* Chart Container */
             #chart-container {
-                height: 500px !important;
+                width: 100%;
+                height: 700px;
+                background: var(--chart-bg);
             }
             
             /* 배지 */
             .status-badge {
-                font-size: 10px !important;
-                padding: 2px 8px !important;
+                padding: 4px 10px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.3px;
+                text-transform: uppercase;
             }
             
             /* 추천 종목 카드 */
@@ -754,7 +846,7 @@
             }
             
             .stock-info {
-                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-columns: repeat(3, 1fr);
             }
             
             #chart-container {
@@ -1118,6 +1210,17 @@
     </div>
     
     <script>
+        
+        // ESC 키로 모달 닫기 추가
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('chart-modal');
+                if (modal && modal.classList.contains('active')) {
+                    closeModal();
+                }
+            }
+        });
+
         let allResults = [];
         let currentZoneType = 'all';
         let currentZonePosition = 'all';
@@ -1851,7 +1954,12 @@
             
             const option = {
                 backgroundColor: '#1e1e1e',
-                animation: false,
+                // 🎯 부드러운 애니메이션 설정
+                animation: true,
+                animationDuration: 150,          // 150ms (빠르고 부드럽게)
+                animationEasing: 'cubicOut',     // 부드러운 곡선
+                animationThreshold: 2000,        // 많은 데이터에서도 애니메이션
+
                 tooltip: {
                     trigger: 'axis',
                     // show: true (웹), false는 모바일 롱프레스에서 제어
@@ -1881,20 +1989,28 @@
                     link: [{xAxisIndex: 'all'}]
                 },
                 dataZoom: [
-                    {
-                        type: 'inside',
-                        xAxisIndex: [0, 1],
-                        start: 50,
-                        end: 100,
-                        zoomOnMouseWheel: true,
-                        moveOnMouseMove: true,
-                        moveOnMouseWheel: true,
-                        preventDefaultMouseMove: false,
-                        zoomLock: false,
-                        throttle: 30,
-                        sensitivity: 0.5
-                    },
-                ],
+                {
+                    type: 'inside',
+                    xAxisIndex: [0, 1],
+                    start: 50,
+                    end: 100,
+                    
+                    // 마우스 조작 설정
+                    zoomOnMouseWheel: true,         // 휠: 확대/축소 (위: 확대, 아래: 축소)
+                    moveOnMouseMove: true,          // 드래그: 이동 (ECharts 기본 동작)
+                    moveOnMouseWheel: false,        // 휠로 이동은 안 함
+                    
+                    // 부드러움 설정
+                    throttle: 30,                   // 30ms 간격 (더 부드럽게)
+                    zoomLock: false,                // 확대/축소 활성화
+                    
+                    // 민감도 (기본값)
+                    ensitivity: 1,                 // 1로 낮춤 (너무 빠르지 않게)
+
+                    // 기본 동작 허용
+                    preventDefaultMouseMove: false  // ECharts 기본 드래그 허용
+                }
+            ],
                 grid: [
                     {
                         left: 60,
@@ -2091,8 +2207,12 @@
         
         // 모달 닫기
         function closeModal() {
-            document.getElementById('chart-modal').classList.remove('active');
+            const modal = document.getElementById('chart-modal');
+            if (!modal) return;
+            
+            modal.classList.remove('active');
             document.body.classList.remove('modal-open');
+            
             if (myChart) {
                 myChart.dispose();
                 myChart = null;
@@ -2128,12 +2248,13 @@
         });
         
         // 모달 외부 클릭시 닫기
-        document.getElementById('chart-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
+        document.addEventListener('click', function(e) {
+            const modal = document.getElementById('chart-modal');
+            if (modal && e.target === modal) {
                 closeModal();
             }
         });
-        
+            
         // 초기 로드
         loadAvailableDates();
         loadData();
