@@ -337,47 +337,62 @@ def run_and_save_investor_data(target_date=None):
             ('institution', 'buy', results_data['institution_buy']),
             ('institution', 'sell', results_data['institution_sell'])
         ]
-        
+
+        # 전체 종목 OHLCV 일괄 조회 (KOSPI + KOSDAQ 각 1회씩, 총 2회 호출)
+        print(f"\n📊 전체 종목 OHLCV 일괄 조회 중...")
+        today_str = date_str
+
+        ohlcv_all = pd.DataFrame()
+        # 전체 종목 OHLCV 일괄 조회 (KOSPI + KOSDAQ 각 1회씩, 총 2회 호출)
+        print(f"\n📊 {date_str} 기준 전체 종목 OHLCV 일괄 조회 중...")
+
+        ohlcv_all = pd.DataFrame()
+        for market in ['KOSPI', 'KOSDAQ']:
+            try:
+                market_df = stock.get_market_ohlcv(date_str, market=market)
+                if market_df is not None and not market_df.empty:
+                    ohlcv_all = pd.concat([ohlcv_all, market_df])
+                    print(f"  ✅ {market}: {len(market_df)}개 종목")
+                else:
+                    print(f"  ⚠️ {market}: 빈 응답 (휴장일 가능)")
+            except Exception as e:
+                print(f"  ⚠️ {market} OHLCV 조회 실패: {e}")
+
+        conn = sqlite3.connect(DB_PATH)
+        saved_count = 0
+
         for investor_type, trade_type, df in categories:
             if df is None or df.empty:
                 continue
-            
-            print(f"\n💰 {investor_type}/{trade_type} 현재가 조회 중...")
-            
+
+            print(f"\n💰 {investor_type}/{trade_type} 처리 중... ({len(df)}개 종목)")
+
             for rank, (ticker, row) in enumerate(df.iterrows(), 1):
                 try:
-                    name = row.get('종목명', stock.get_market_ticker_name(ticker))
-                    
-                    try:
-                        price_df = stock.get_market_ohlcv_by_date(
-                            (datetime.now(KST).date() - timedelta(days=7)).strftime('%Y%m%d'),
-                            datetime.now(KST).date().strftime('%Y%m%d'),
-                            ticker
-                        )
-                        
-                        if len(price_df) > 0:
-                            latest = price_df.iloc[-1]
-                            prev = price_df.iloc[-2] if len(price_df) > 1 else latest
-                            current = latest['종가']
-                            change = ((current - prev['종가']) / prev['종가'] * 100) if prev['종가'] > 0 else 0
-                        else:
-                            current = 0
-                            change = 0
-                    except:
+                    name = row.get('종목명', '')
+                    if not name:
+                        try:
+                            name = stock.get_market_ticker_name(ticker)
+                        except:
+                            name = ticker
+
+                    # dict lookup으로 즉시 조회 (API 호출 없음)
+                    if ticker in ohlcv_all.index:
+                        current = int(ohlcv_all.loc[ticker, '종가'])
+                        change = float(ohlcv_all.loc[ticker, '등락률'])
+                    else:
                         current = 0
                         change = 0
-                    
+
                     buy_amount = int(row.get('매수거래대금', 0))
                     sell_amount = int(row.get('매도거래대금', 0))
                     net_amount = int(row.get('순매수거래대금', 0))
-                    
-                    # 거래량 추가
                     buy_volume = int(row.get('매수거래량', 0))
                     sell_volume = int(row.get('매도거래량', 0))
                     net_volume = int(row.get('순매수거래량', 0))
-                    
+
                     conn.execute('''
-                        INSERT INTO investor_trading 
+                        INSERT INTO investor_trading
                         (scan_date, investor_type, trade_type, rank, code, name, market,
                          current_price, change_percent, buy_amount, sell_amount, net_amount,
                          buy_volume, sell_volume, net_volume)
@@ -388,18 +403,18 @@ def run_and_save_investor_data(target_date=None):
                         buy_amount, sell_amount, net_amount,
                         buy_volume, sell_volume, net_volume
                     ))
-                    
+
                     saved_count += 1
-                    
+
                 except Exception as e:
                     print(f"  ⚠️ {ticker} 저장 실패: {e}")
                     continue
-        
+
         conn.commit()
         conn.close()
-        
+
         print(f"\n✅ 총 {saved_count}개 종목 DB 저장 완료")
-        
+
     except Exception as e:
         print(f"❌ 데이터 수집 실패: {e}")
         import traceback
