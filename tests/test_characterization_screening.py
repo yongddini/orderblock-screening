@@ -223,23 +223,24 @@ def test_run_and_save_screening_runs_on_business_day_after_holiday(
     assert fake_fdr.calls != []
 
 
-def test_app_production_holiday_guard_is_not_truthiness(
-    monkeypatch: pytest.MonkeyPatch, fake_fdr: FakeFdr, fresh_db: Path
+def test_app_production_uses_the_single_screening_function(
+    fake_fdr: FakeFdr, fresh_db: Path
 ) -> None:
-    """`app_production`의 같은 검사도 고쳤다 — 전역 객체가 비어 있어도(거짓) 공휴일을 본다."""
+    """`app_production`이 따로 들고 있던 `run_and_save_screening` 사본은 OBS-4가 지웠다.
+
+    OBS-9는 두 사본 각각의 공휴일 검사를 고치며 이 자리에서 「`app_production`의 자기 사본」을
+    확인했는데(`__module__ == "app_production"` · 전역 `KR_HOLIDAYS`), 중복 제거가 OBS-4의
+    목적이라 그 전제는 사라진다. 이제 두 이름이 **같은 함수**이고, 그 함수가 평일 공휴일
+    (2026-09-25 추석)을 건너뛰는지 — `bool()`이 아니라 `today in` 검사로 — 확인한다.
+    """
     import holidays
 
     import app_production
 
-    assert app_production.KR_HOLIDAYS is not None
-    # 연도를 아직 안 채운 새 객체 = 「비어 있어서 bool()이 거짓」인 상태를 재현한다.
-    fresh = holidays.country_holidays("KR")
-    assert not fresh
-    monkeypatch.setattr(app_production, "KR_HOLIDAYS", fresh)
-    # app_production은 screening_core에서 import한 같은 이름을 자기 정의로 덮어쓴다
-    # (중복 정리는 OBS-4) — 여기서 부르는 것이 그 자체 정의임을 확인한다.
-    run: Callable[[str], None] = vars(app_production)["run_and_save_screening"]
-    assert run.__module__ == "app_production"
+    run: Callable[[str], None] = app_production.run_and_save_screening
+    assert run is screening_core.run_and_save_screening
+    # 막 만든 holidays 객체는 연도를 지연 생성해 비어 있다(bool() 거짓) — 그래도 걸러야 한다.
+    assert not holidays.country_holidays("KR")
     run("20260925")
     assert fake_fdr.calls == []
     assert query_rows(fresh_db, "SELECT COUNT(*) AS n FROM screening_results")[0]["n"] == 0

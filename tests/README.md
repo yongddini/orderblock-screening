@@ -1,5 +1,9 @@
 # 테스트 — 현행 동작 고정(특성 테스트, OBS-3)
 
+> OBS-4 이후 코드는 `obscreen/` 패키지에 있다. 테스트는 여전히 옛 이름(`app_production`·
+> `screening_core` 등)을 import하는데, 그 이름들은 패키지 모듈의 **별칭**(같은 모듈 객체)이라
+> `monkeypatch.setattr(app_production, ...)`이 실제 구현에 그대로 닿는다.
+
 리모델링 3(구조 정리)·4(탐지기 교체) **전에** 지금 코드가 무엇을 내는지 못 박아 둔
 테스트다. 목적은 둘이다.
 
@@ -26,6 +30,7 @@ uv run pytest            # 전부(네트워크 호출 0 — conftest가 TCP·DNS
 | `test_market_cap_selection.py` | 시총 상위 N 선정(OBS-7) — `Marcap` 전부 NaN 입력에서 `Close × Stocks` 순위 · `KOSDAQ GLOBAL` 포함/KONEX 제외 · `Marcap`이 오면 그 값 우선 · 시총 미상 비율 방어(5%)와 기존 결과 보존 · `collect_data --all`의 수급 계속 + 종료 코드 1 |
 | `test_characterization_wiring.py` | 운영 경로가 **넘기는 설정값** — `run_and_save_screening`의 `StockScreener` 3개(근접도 3/1/5%·ATR 배수 2.0 등)와 차트 API의 `RealtimeOrderBlockDetector` 인자를 생성자 스파이로 기록(기본값 포함). 필터를 **푸는** 변화는 출력 스냅샷으로 안 잡히기 때문(OBS-4가 이 숫자들을 설정으로 옮긴다) + 근접도를 값으로 거는 합성 존(현재가 3.2% 아래) |
 | `test_chart_frontend.py` | 차트 화면(OBS-10) — ECharts 제거·벤더링 라이브러리 서빙, `static/js/ob_chart.js` 존 박스 규칙을 node로, 실제 `/api/chart-data*` 응답의 존 ↔ 박스 가격대·시작 봉 정합(node 없으면 건너뜀) |
+| `test_structure.py` | 패키지 구조(OBS-4) — 옛 모듈 이름이 `obscreen` 모듈의 **같은 객체**(별칭)인지, 중복 함수·루트 `index.html`이 없는지, 설정 기본값 = 옮기기 전 숫자, 서버 경로 하드코딩 0건, 실험 라우트 스위치와 화면 URL, `obscreen` CLI |
 | `support.py` | 가짜 FinanceDataReader·pykrx, 스냅샷 비교기 |
 
 ## 고정 입력(`tests/fixtures/`)
@@ -70,8 +75,9 @@ git diff --stat tests/snapshots/     # 무엇이 바뀌었나
 4. ~~**실측 종목 목록의 시가총액이 비어 있다**~~ — **OBS-7이 고쳤다.** `Marcap`이 비면
    `Close × Stocks`로 계산하고, 코스닥은 `KOSDAQ GLOBAL`을 포함하며, 시총을 모르는 종목이
    5%를 넘으면 스크리닝을 멈춘다(`test_market_cap_selection.py`).
-5. `app_production.py`가 `screening_core.run_and_save_screening`을 import한 뒤 **같은 이름의
-   자기 함수로 덮어쓴다**(두 벌). cron(`collect_data.py`)은 `screening_core` 판을 쓴다 —
+5. ~~`app_production.py`가 `screening_core.run_and_save_screening`을 import한 뒤 **같은 이름의
+   자기 함수로 덮어쓴다**(두 벌)~~ — **OBS-4가 하나로 합쳤다**(`test_structure.py`). cron은
+   원래 `screening_core` 판을 썼다 —
    이 테스트도 그쪽을 고정한다.
 6. **일봉과 주봉의 존 개수 규칙이 다르다** — 일봉 `check_proximity`는 최신 3개 존만 보는데
    (`[:3]`, 「Zone Count: Low」) 주봉 `check_proximity_weekly`에는 그 절단이 없다.
