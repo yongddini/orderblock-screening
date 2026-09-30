@@ -8,3 +8,5 @@ requests==2.32.5
 finance-datareader
 tqdm
 holidays
+pydantic-settings>=2.0
+

@@ -1,113 +1,20 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-데이터 수집 통합 스크립트
-- 오더블록 스크리닝
-- 외국인/기관 매매 데이터
+"""호환 별칭 — 수집 cron 진입점. 실제 코드는 `obscreen.collect`(OBS-4).
+
+이 이름을 import하면 **같은 모듈 객체**를 받는다(`sys.modules`를 바꿔 끼운다). 그래서
+`collect_data.X`를 바꿔 끼우는 코드(테스트의 monkeypatch 등)가 실제 구현에 그대로 닿는다.
+새 코드는 `obscreen.collect`을 직접 import한다.
 """
 
 import sys
-from data_provider import MarketCapUnavailableError
-from screening_core import run_and_save_screening, run_and_save_investor_data
 
+from obscreen.collect import *  # noqa: F403 — 타입 검사기가 이름을 보게 한다
 
-def print_usage():
-    """사용법 출력"""
-    print("""
-사용법:
-    python3 collect_data.py [옵션] [날짜]
+if __name__ != "__main__":
+    import obscreen.collect as _impl
 
-옵션:
-    --all         전체 수집 (오더블록 + 외국인/기관) [기본값]
-    --screening   오더블록 스크리닝만
-    --investor    외국인/기관 데이터만
-    -h, --help    도움말
+    sys.modules[__name__] = _impl
 
-날짜:
-    YYYYMMDD 형식 (예: 20250212)
-    생략시 오늘/최근 영업일 자동 선택
+if __name__ == "__main__":  # `python3 collect_data.py [--all|--screening|--investor] [YYYYMMDD]`
+    from obscreen.collect import main
 
-예시:
-    python3 collect_data.py                    # 전체, 오늘
-    python3 collect_data.py 20250212           # 전체, 12일
-    python3 collect_data.py --screening        # 오더블록만, 오늘
-    python3 collect_data.py --investor 20250212  # 외국인/기관만, 12일
-    """)
-
-
-def main():
-    # 파라미터 파싱
-    mode = "all"  # 기본값: 전체
-    target_date = None
-
-    args = sys.argv[1:]
-
-    for arg in args:
-        if arg in ["-h", "--help"]:
-            print_usage()
-            return
-        elif arg == "--all":
-            mode = "all"
-        elif arg == "--screening":
-            mode = "screening"
-        elif arg == "--investor":
-            mode = "investor"
-        elif arg.isdigit() and len(arg) == 8:
-            target_date = arg
-        else:
-            print(f"❌ 알 수 없는 옵션: {arg}")
-            print_usage()
-            return
-
-    # 날짜 정보 출력
-    if target_date:
-        print(f"📅 지정된 날짜: {target_date}")
-    else:
-        print(f"📅 오늘/최근 영업일 데이터 수집")
-
-    # 모드별 실행
-    if mode == "all":
-        print("\n" + "=" * 60)
-        print("1️⃣  오더블록 스크리닝")
-        print("=" * 60)
-        # 시가총액 순위를 못 만들면 스크리닝만 멈추고 수급 수집은 계속한다(OBS-7 §5).
-        # 끝에 종료 코드 1로 실패를 알린다(cron 로그·감시가 보도록).
-        screening_error = None
-        try:
-            run_and_save_screening(target_date=target_date)
-        except MarketCapUnavailableError as e:
-            screening_error = e
-            print(f"❌ 오더블록 스크리닝 중단: {e}", file=sys.stderr)
-
-        print("\n" + "=" * 60)
-        print("2️⃣  외국인/기관 매매 데이터")
-        print("=" * 60)
-        run_and_save_investor_data(target_date=target_date)
-
-        if screening_error is not None:
-            print("\n" + "=" * 60)
-            print("❌ 수급 수집은 끝났지만 오더블록 스크리닝이 중단됐습니다.")
-            print("=" * 60)
-            sys.exit(1)
-
-        print("\n" + "=" * 60)
-        print("✅ 전체 수집 완료!")
-        print("=" * 60)
-
-    elif mode == "screening":
-        print("\n" + "=" * 60)
-        print("📊 오더블록 스크리닝")
-        print("=" * 60)
-        run_and_save_screening(target_date=target_date)
-        print("\n✅ 오더블록 스크리닝 완료!")
-
-    elif mode == "investor":
-        print("\n" + "=" * 60)
-        print("💰 외국인/기관 매매 데이터")
-        print("=" * 60)
-        run_and_save_investor_data(target_date=target_date)
-        print("\n✅ 외국인/기관 데이터 수집 완료!")
-
-
-if __name__ == "__main__":
     main()

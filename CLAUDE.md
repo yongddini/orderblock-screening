@@ -2,7 +2,8 @@
 
 오더블록(Order Block) 기반 **국내주식 스크리닝 웹서비스**. 매일 장 마감 뒤 코스피·코스닥·ETF를
 스크리닝해 오더블록 근처 종목을 SQLite에 저장하고, Flask 웹 화면으로 보여 준다.
-서버는 `/home/rocky/orderblock`(gunicorn + 매일 20:30 KST cron `daily_screening.sh`).
+서버는 `/home/rocky/orderblock`(gunicorn `app_production:app` + 매일 20:30 KST cron
+`daily_screening.sh`).
 
 **이 저장소에서 Claude Code의 역할은 「개발자」다.** 완료 판단·상태 관리·다음 작업 제안은
 PM 러너가, 머지는 사용자가 한다.
@@ -46,10 +47,9 @@ uv run pytest
 
 - 통과 판정은 exit 코드가 아니라 **완주 증거**다 — pytest는 `N passed in ...` 요약 줄이 찍혀야 한다.
 - 선택: `uv run pre-commit install`로 커밋 훅을 건다.
-- **mypy는 점진 적용이다** — `pyproject.toml`의 `[tool.mypy] files`에 적힌 경로(새 코드)만
-  strict로 검사하고, 레거시 모듈은 `ignore_errors` override로 둔다. **새 패키지를 만들면
-  `files`에 추가**하고, 레거시 모듈을 정리하면 override 목록에서 뺀다. ruff도 같은 방식이다
-  (레거시 모듈은 `per-file-ignores`).
+- **mypy strict · ruff 전체 규칙이 전 코드에 걸린다**(OBS-4가 레거시 예외 목록을 없앴다).
+  pandas는 타입 스텁이 없어 `pd.DataFrame`이 `Any`다 — 시세 조회가 `None`을 돌려줄 수 있어도
+  반환 타입에 `| None`을 적지 않았다(`obscreen/data/provider.py` 모듈 설명).
 - 테스트는 **외부 API(pykrx·FinanceDataReader·yfinance)를 부르지 않는다** — 고정 입력을 쓴다.
   테스트는 `tests/conftest.py`가 `DB_PATH`를 임시 파일로 박은 뒤 앱을 import한다(레거시 앱은
   import 순간 DB를 만든다). `conftest.py`가 모든 테스트에서 TCP·DNS를 막는다.
@@ -58,33 +58,50 @@ uv run pytest
   이유를 적는다. 구조 정리처럼 동작이 안 바뀌어야 하는 PR에서 스냅샷이 바뀌면 버그다
   (자세한 것은 `tests/README.md`).
 
-## 프로젝트 구조 (리모델링 전 — 평평한 레거시 레이아웃)
+## 프로젝트 구조 (OBS-4 — `obscreen` 패키지)
 
 ```
-app_production.py     # Flask 앱(gunicorn 진입점) · 라우트 · 차트 API · init_db()
-screening_core.py     # 스크리닝 실행·DB 저장(오더블록 + 외국인/기관 매매)
-collect_data.py       # cron 진입점 CLI (--all/--screening/--investor [YYYYMMDD])
-stock_screener.py     # 종목 스크리너(병렬)
-realtime_detector.py  # 오더블록 탐지기(룩어헤드 제거 버전)
-orderblock_info.py    # 오더블록 자료구조
-indicators.py         # ATR·스윙 등 지표
-data_provider.py      # 시세 조회(pykrx·FinanceDataReader)
-templates/            # Flask 템플릿(index.html · investor.html)
-static/               # 차트 JS(js/ob_chart.js) + 벤더링 라이브러리(vendor/ — Lightweight Charts v5.2.0, OBS-10)
-index.html            # 루트의 옛 사본(templates/index.html과 내용이 다르다 — 리모델링 3에서 정리)
-daily_screening.sh    # 서버 cron 스크립트(서버 경로 하드코딩)
-tests/                # pytest — 스모크 + 현행 동작 고정 특성 테스트(OBS-3, tests/README.md)
+obscreen/
+  config.py            # 설정(pydantic-settings, `.env`) — DB 경로·로그·포트·근접도·탐지기 값
+  cli.py · __main__.py # `obscreen collect` · `obscreen serve` (서버 cron: `python3 -m obscreen collect`)
+  collect.py           # 수집 본체(옛 collect_data.py — 인자·종료 코드 동일)
+  data/provider.py     # 시세 조회(pykrx·FinanceDataReader)
+  data/store.py        # SQLite 스키마(init_db)
+  detect/base.py       # 탐지기 프로토콜 — 리모델링 4(OBS-5)가 갈아끼울 자리
+  detect/realtime.py · orderblock.py · indicators.py   # 현행 탐지기·자료구조·지표
+  screening/core.py    # 스크리닝 실행·DB 저장(오더블록 + 외국인/기관) — **유일한** run_and_save_screening
+  screening/screener.py# 종목 스크리너(병렬)
+  web/app.py           # 조합 루트: create_app() · DB_PATH · 탐지기 클래스 · init_db()
+  web/deps.py          # Blueprint가 조합 루트 전역을 **호출 시점에** 읽는 창구
+  web/pages.py · screening_api.py · investor_api.py · chart_api.py   # Blueprint
+  web/experimental.py  # 실험·구버전 라우트(plotly 포함) — OBSCREEN_EXPERIMENTAL_ROUTES 스위치
+templates/ · static/    # Flask 템플릿·정적 파일(위치·URL 불변 — /static/...)
+daily_screening.sh      # 서버 cron — 스크립트 폴더 기준으로 돈다(경로 하드코딩 없음)
+app_production.py 등    # 호환 별칭(아래)
+tests/                  # pytest — 스모크 + 현행 동작 고정 특성 테스트(OBS-3, tests/README.md)
 ```
 
+- **루트의 옛 이름은 별칭이다** — `app_production`·`screening_core`·`stock_screener`·
+  `realtime_detector`·`orderblock_info`·`indicators`·`data_provider`·`collect_data`를 import하면
+  `sys.modules`를 바꿔 끼워 **패키지 모듈 객체 자체**를 받는다. 그래서 gunicorn
+  `app_production:app`·`python3 collect_data.py`·특성 테스트의 monkeypatch가 그대로 동작한다.
+  **새 코드는 `obscreen.*`를 직접 import한다**(패키지 안에서 옛 이름을 쓰면 안 된다).
+- ⚠️ **모듈 전역을 import 시점에 복사하지 말 것** — 테스트는 `app_production.DB_PATH`·
+  `app_production.RealtimeOrderBlockDetector`를 바꿔 끼운다. Blueprint는 `obscreen.web.deps`로
+  호출 시점에 읽는다(`from obscreen.web.app import DB_PATH`로 복사하면 조용히 옛 값을 쓴다).
+- 설정 기본값은 옮기기 전 코드의 숫자와 같다. 옛 환경변수 이름(`DB_PATH`·`SCREENING_TOP_N`·
+  `SCREENING_ETF_N`·`FLASK_ENV`)은 그대로, 새 값은 `OBSCREEN_*`(`.env.example`).
 - 의존성은 `pyproject.toml` + `uv.lock`이 정본이다. `requirements.txt`는 서버 배포가 아직 쓰므로
   리모델링 5(배포)까지 남겨 둔다.
+  ⚠️ OBS-4가 `pydantic-settings`를 더했다(두 파일 모두) — 서버는 이 커밋을 받은 뒤
+  `pip install -r requirements.txt`를 한 번 해야 cron·gunicorn이 뜬다.
 - 설정은 환경변수(`.env.example` 참고). API 키·시크릿은 코드에 하드코딩하지 않는다.
 
 - **차트는 Lightweight Charts 한 가지다(OBS-10)** — AlphaBlock과 같은 v5.2.0을 `static/vendor/`에
   벤더링하고 `static/js/ob_chart.js`가 캔들 + 존 박스(캔버스 프리미티브 **하나**) + RSI 보조창을
   그린다. 존마다 시리즈를 만들지 말 것(AlphaBlock에서 2,000개에 브라우저가 멈췄다). 순수 함수는
   `tests/test_chart_frontend.py`가 node로 검사한다. plotly `create_chart_html*`·실험 라우트는
-  OBS-4가 정리한다.
+  OBS-4가 `obscreen/web/experimental.py` 한곳에 모았다(지울지 끌지는 사용자 결정 대기).
 
 ## 리모델링 방향 (사용자 결정 2026-09-30)
 
