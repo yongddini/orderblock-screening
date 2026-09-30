@@ -1,0 +1,95 @@
+[project]
+name = "orderblock-screening"
+version = "0.1.0"
+description = "오더블록 기반 국내주식 스크리닝 웹서비스 (Obscreen)"
+readme = "README.md"
+# 서버에서 도는 파이썬 버전은 아직 확인 전이다(리모델링 5 배포 이슈에서 맞춘다).
+requires-python = ">=3.11,<3.13"
+# 버전은 기존 requirements.txt 값을 옮겼다(서버 실제 버전 미확인 → 이슈 지침대로
+# requirements.txt 유지). 버전이 적혀 있지 않던 셋은 uv.lock이 고정한다.
+# 예외 하나: requirements.txt의 `pandas==2.1.4`는 `pykrx==1.2.4`(pandas>=2.2,<3 요구)와
+# 함께 설치될 수 없는 조합이라, pykrx 핀을 살리고 pandas를 그 범위로 푼다(정확한 버전은
+# uv.lock). 서버의 실제 pandas 버전은 리모델링 5(배포)에서 확인한다.
+dependencies = [
+    "flask==3.0.0",
+    "gunicorn==21.2.0",
+    "pandas>=2.2,<3.0",
+    "plotly==5.18.0",
+    "yfinance==0.2.33",
+    "pykrx==1.2.4",
+    "requests==2.32.5",
+    "finance-datareader",
+    "tqdm",
+    "holidays",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pytest>=8",
+    "pre-commit>=3.7",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# 정적 HTML 등 비파이썬 파일은 ruff 대상이 아니다.
+
+[tool.ruff.lint]
+# 새 코드(tests/ 및 앞으로 만들 패키지)는 넓은 규칙을 따른다.
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# 레거시 모듈(리모델링 전 코드)은 동작을 건드리지 않으려고 규칙을 느슨하게 둔다.
+# 리모델링 3(패키지 구조 정리)에서 모듈을 옮기며 이 목록을 줄여 나간다.
+"app_production.py" = ["E", "F", "I", "UP", "B", "SIM"]
+"collect_data.py" = ["E", "F", "I", "UP", "B", "SIM"]
+"data_provider.py" = ["E", "F", "I", "UP", "B", "SIM"]
+"indicators.py" = ["E", "F", "I", "UP", "B", "SIM"]
+"orderblock_info.py" = ["E", "F", "I", "UP", "B", "SIM"]
+"realtime_detector.py" = ["E", "F", "I", "UP", "B", "SIM"]
+"screening_core.py" = ["E", "F", "I", "UP", "B", "SIM"]
+"stock_screener.py" = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+# 점진 적용: strict는 `files`에 적힌 경로(새 코드)에만 걸린다.
+# 새 패키지를 만들면 여기에 추가한다. 레거시 모듈은 아래 override로 검사하지 않는다.
+strict = true
+files = ["tests"]
+
+# 레거시 모듈 — tests가 import해도 오류를 보고하지 않는다(리모델링 3에서 줄여 나간다).
+[[tool.mypy.overrides]]
+module = [
+    "app_production",
+    "collect_data",
+    "data_provider",
+    "indicators",
+    "orderblock_info",
+    "realtime_detector",
+    "screening_core",
+    "stock_screener",
+]
+ignore_errors = true
+
+# 타입 스텁을 제공하지 않는 서드파티.
+[[tool.mypy.overrides]]
+module = [
+    "pandas.*",
+    "plotly.*",
+    "pykrx.*",
+    "FinanceDataReader.*",
+    "yfinance.*",
+    "holidays.*",
+    "tqdm.*",
+    "numpy.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
