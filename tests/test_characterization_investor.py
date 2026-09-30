@@ -57,12 +57,17 @@ def test_investor_roundtrip(fake_pykrx: FakePykrxStock, fresh_db: Path) -> None:
 
 def test_investor_api_reads_back(fake_pykrx: FakePykrxStock, fresh_db: Path) -> None:
     client = app_production.app.test_client()
-    # ⚠️ 현행 동작: `investor_trading` 테이블은 `init_db()`가 아니라 첫 수집 때 만들어진다.
-    # 수집 전에 부르면 404가 아니라 500(no such table)이 난다(버그 후보 — 기록만).
-    empty = client.get("/api/investor-trading")
-    assert empty.status_code == 500
-    assert empty.get_json()["success"] is False
-    assert "no such table" in empty.get_json()["error"]
+    # `investor_trading` 테이블은 `init_db()`가 아니라 첫 수집 때 만들어진다. 수집 전 조회는
+    # 「데이터 없음」(404)이지 서버 오류(500 no such table)가 아니다(OBS-9 — OBS-3이 500을
+    # 고정해 뒀던 것을 뒤집었다).
+    assert not query_rows(
+        fresh_db, "SELECT name FROM sqlite_master WHERE name = 'investor_trading'"
+    )
+    for url in ("/api/investor-trading", "/api/investor-trading?date=20260101"):
+        empty = client.get(url)
+        assert empty.status_code == 404
+        assert empty.get_json() == {"success": False, "error": "No data available"}
+    assert client.get("/api/investor-dates").get_json() == {"success": True, "dates": []}
 
     screening_core.run_and_save_investor_data(SCREEN_DATE_COMPACT)
 
