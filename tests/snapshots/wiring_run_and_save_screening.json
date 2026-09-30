@@ -1,0 +1,37 @@
+{
+ "detectors_distinct": [
+  {
+   "combine_obs": true,
+   "max_atr_mult": 2.0,
+   "max_order_blocks": 30,
+   "ob_end_method": "Wick",
+   "swing_length": 10
+  }
+ ],
+ "screeners": [
+  {
+   "combine_obs": true,
+   "max_atr_mult": 2.0,
+   "max_workers": 4,
+   "ob_end_method": "Wick",
+   "proximity_percent": 3.0,
+   "swing_length": 10
+  },
+  {
+   "combine_obs": true,
+   "max_atr_mult": 2.0,
+   "max_workers": 4,
+   "ob_end_method": "Wick",
+   "proximity_percent": 1.0,
+   "swing_length": 10
+  },
+  {
+   "combine_obs": true,
+   "max_atr_mult": 2.0,
+   "max_workers": 4,
+   "ob_end_method": "Wick",
+   "proximity_percent": 5.0,
+   "swing_length": 10
+  }
+ ]
+}

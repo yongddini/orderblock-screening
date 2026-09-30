@@ -23,6 +23,7 @@ uv run pytest            # 전부(네트워크 호출 0 — conftest가 TCP·DNS
 | `test_characterization_screening.py` | 근접도 분류(`classify_position`) 경계, 종목별 `check_proximity(_weekly)`, 종목 선정(시총 상위·ETF 제외 규칙), 시장 스크리닝, `run_and_save_screening` DB 행 · 추천 플래그(bit1·bit2) · 주말/공휴일 |
 | `test_characterization_investor.py` | 수급(외국인·기관) 저장 → 임시 SQLite → 표·API 왕복 |
 | `test_characterization_api.py` | `/api/screening/*`·`/api/chart-data(-weekly)/*`·`/api/stock/*`·`/health` 응답 모양(키·타입) + 차트 오더블록 값 |
+| `test_characterization_wiring.py` | 운영 경로가 **넘기는 설정값** — `run_and_save_screening`의 `StockScreener` 3개(근접도 3/1/5%·ATR 배수 2.0 등)와 차트 API의 `RealtimeOrderBlockDetector` 인자를 생성자 스파이로 기록(기본값 포함). 필터를 **푸는** 변화는 출력 스냅샷으로 안 잡히기 때문(OBS-4가 이 숫자들을 설정으로 옮긴다) + 근접도를 값으로 거는 합성 존(현재가 3.2% 아래) |
 | `support.py` | 가짜 FinanceDataReader·pykrx, 스냅샷 비교기 |
 
 ## 고정 입력(`tests/fixtures/`)
