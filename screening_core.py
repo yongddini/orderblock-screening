@@ -243,6 +243,23 @@ def run_and_save_screening(target_date=None):
     print(f"⭐ {recommended_count}개 추천 종목")
 
 
+def _resolve_investor_name(stock, ticker, raw_name):
+    """수급 행의 종목명을 정한다 — 비었으면 티커로 조회하고, 그것도 안 되면 티커 자체.
+
+    pandas는 CSV의 빈 칸을 NaN(float)으로 읽는데 NaN은 참으로 평가돼 `if not name`
+    폴백을 건너뛰고 NOT NULL 제약에 걸려 그 행이 조용히 빠졌다 — 순위에 구멍이 났다(OBS-9).
+    """
+    if isinstance(raw_name, str) and raw_name.strip():
+        return raw_name.strip()
+    try:
+        looked_up = stock.get_market_ticker_name(ticker)
+    except Exception:
+        looked_up = None
+    if isinstance(looked_up, str) and looked_up.strip():
+        return looked_up.strip()
+    return str(ticker)
+
+
 def run_and_save_investor_data(target_date=None):
     """외국인/기관 매매 데이터 수집 및 저장"""
     try:
@@ -389,12 +406,7 @@ def run_and_save_investor_data(target_date=None):
 
             for rank, (ticker, row) in enumerate(df.iterrows(), 1):
                 try:
-                    name = row.get("종목명", "")
-                    if not name:
-                        try:
-                            name = stock.get_market_ticker_name(ticker)
-                        except:
-                            name = ticker
+                    name = _resolve_investor_name(stock, ticker, row.get("종목명"))
 
                     # dict lookup으로 즉시 조회 (API 호출 없음)
                     if ticker in ohlcv_all.index:
