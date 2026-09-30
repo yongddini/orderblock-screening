@@ -7,6 +7,7 @@ run_and_save_screening`의 DB 저장(추천 플래그 포함)을 고정 입력�
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -202,7 +203,7 @@ def test_run_and_save_screening_skips_weekday_holiday(
 ) -> None:
     """평일 공휴일(2026-09-25 추석 · 2026-10-09 한글날)은 조회도 저장도 하지 않는다(OBS-9).
 
-    옛 코드는 `if KR_HOLIDAYS and today in KR_HOLIDAYS`였는데 `holidays.SouthKorea()`는
+    옛 코드는 `if KR_HOLIDAYS and today in KR_HOLIDAYS`였는데 `holidays.country_holidays("KR")`는
     연도를 지연 생성해 막 만든 객체의 `bool()`이 거짓이라 `in` 검사까지 가지 않았다
     (OBS-3이 그 동작을 `..._does_not_skip_weekday_holiday`로 고정해 뒀다 — 이 테스트가 뒤집은 것).
     """
@@ -217,7 +218,7 @@ def test_run_and_save_screening_runs_on_business_day_after_holiday(
     """공휴일 판정이 평일 영업일까지 막지는 않는다 — 추석 연휴 다음 영업일(2026-09-28 월)."""
     import holidays
 
-    assert date(2026, 9, 28) not in holidays.SouthKorea()
+    assert date(2026, 9, 28) not in holidays.country_holidays("KR")
     screening_core.run_and_save_screening("20260928")
     assert fake_fdr.calls != []
 
@@ -232,10 +233,14 @@ def test_app_production_holiday_guard_is_not_truthiness(
 
     assert app_production.KR_HOLIDAYS is not None
     # 연도를 아직 안 채운 새 객체 = 「비어 있어서 bool()이 거짓」인 상태를 재현한다.
-    fresh = holidays.SouthKorea()
+    fresh = holidays.country_holidays("KR")
     assert not fresh
     monkeypatch.setattr(app_production, "KR_HOLIDAYS", fresh)
-    app_production.run_and_save_screening("20260925")
+    # app_production은 screening_core에서 import한 같은 이름을 자기 정의로 덮어쓴다
+    # (중복 정리는 OBS-4) — 여기서 부르는 것이 그 자체 정의임을 확인한다.
+    run: Callable[[str], None] = vars(app_production)["run_and_save_screening"]
+    assert run.__module__ == "app_production"
+    run("20260925")
     assert fake_fdr.calls == []
     assert query_rows(fresh_db, "SELECT COUNT(*) AS n FROM screening_results")[0]["n"] == 0
 

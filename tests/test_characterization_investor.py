@@ -51,7 +51,9 @@ def test_investor_roundtrip(fake_pykrx: FakePykrxStock, fresh_db: Path) -> None:
     # 순위는 1부터 빈틈없이 이어진다(네 분류 전부).
     for inv in ("foreign", "institution"):
         for side in ("buy", "sell"):
-            ranks = [r["rank"] for r in rows if (r["investor_type"], r["trade_type"]) == (inv, side)]
+            ranks = [
+                r["rank"] for r in rows if (r["investor_type"], r["trade_type"]) == (inv, side)
+            ]
             assert ranks == list(range(1, len(ranks) + 1))
     assert by_key[("foreign", "sell", 1)]["code"] == "000660"
     # 시세가 없는 종목은 현재가·등락률 0으로 저장된다.
