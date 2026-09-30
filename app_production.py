@@ -101,7 +101,8 @@ def run_and_save_screening(target_date=None):
         return
 
     # Holiday check (using holidays library)
-    if KR_HOLIDAYS and today in KR_HOLIDAYS:
+    # `is not None` — 막 만든 holidays 객체는 연도를 지연 생성해 bool()이 거짓이다(OBS-9).
+    if KR_HOLIDAYS is not None and today in KR_HOLIDAYS:
         holiday_name = KR_HOLIDAYS.get(today)
         print(f"Holiday {today} ({holiday_name}), skipping screening.")
         return
@@ -874,6 +875,15 @@ def investor_page():
     return render_template("investor.html")
 
 
+def _investor_table_exists(conn):
+    """`investor_trading`은 init_db()가 아니라 첫 수급 수집 때 만들어진다 — 수집 전 조회는
+    「데이터 없음」이지 서버 오류가 아니다(OBS-9)."""
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'investor_trading'"
+    ).fetchone()
+    return row is not None
+
+
 @app.route("/api/investor-trading")
 def get_investor_trading():
     """Get investor trading data API
@@ -893,6 +903,9 @@ def get_investor_trading():
     conn.row_factory = sqlite3.Row
 
     try:
+        if not _investor_table_exists(conn):
+            return jsonify({"success": False, "error": "No data available"}), 404
+
         # If no date specified, get latest date
         if not date:
             cursor = conn.cursor()
@@ -945,6 +958,8 @@ def get_investor_dates():
     conn.row_factory = sqlite3.Row
 
     try:
+        if not _investor_table_exists(conn):
+            return jsonify({"success": True, "dates": []})
         cursor = conn.cursor()
         cursor.execute(
             "SELECT DISTINCT scan_date FROM investor_trading ORDER BY scan_date DESC LIMIT 30"

@@ -51,6 +51,23 @@
   "trade_type": "buy"
  },
  {
+  "buy_amount": 2000,
+  "buy_volume": 20,
+  "change_percent": 0.0,
+  "code": "777770",
+  "current_price": 0.0,
+  "investor_type": "foreign",
+  "market": "KOSDAQ",
+  "name": "이름조회-777770",
+  "net_amount": 1000,
+  "net_volume": 10,
+  "rank": 4,
+  "scan_date": "20260914",
+  "sell_amount": 1000,
+  "sell_volume": 10,
+  "trade_type": "buy"
+ },
+ {
   "buy_amount": 60000000,
   "buy_volume": 300,
   "change_percent": -2.0,
@@ -116,6 +133,23 @@
   "scan_date": "20260914",
   "sell_amount": 160000000,
   "sell_volume": 800,
+  "trade_type": "sell"
+ },
+ {
+  "buy_amount": 2000,
+  "buy_volume": 20,
+  "change_percent": 0.0,
+  "code": "777770",
+  "current_price": 0.0,
+  "investor_type": "foreign",
+  "market": "KOSDAQ",
+  "name": "이름조회-777770",
+  "net_amount": 1000,
+  "net_volume": 10,
+  "rank": 3,
+  "scan_date": "20260914",
+  "sell_amount": 1000,
+  "sell_volume": 10,
   "trade_type": "sell"
  },
  {
