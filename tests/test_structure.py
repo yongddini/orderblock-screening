@@ -6,7 +6,7 @@
 - 설정 기본값이 옮기기 전 코드에 박혀 있던 숫자와 같다(`test_characterization_wiring.py`가
   넘어가는 값을 따로 건다).
 - 서버 경로를 코드·스크립트에 하드코딩하지 않는다.
-- 실험 라우트는 한 스위치 뒤에 모여 있고, 화면이 쓰는 URL은 그 스위치와 무관하다.
+- 화면이 쓰는 URL은 살아 있고, 지운 실험 라우트(사용자 결정)는 404다.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ LEGACY_ALIASES = {
     "collect_data": "obscreen.collect",
 }
 
-#: 화면(templates/·static/js)이 부르는 URL — 실험 라우트 스위치와 무관하게 살아 있어야 한다.
+#: 화면(templates/·static/js)이 부르는 URL — 반드시 살아 있어야 한다.
 SCREEN_URLS = (
     "/",
     "/investor",
@@ -49,7 +49,8 @@ SCREEN_URLS = (
     "/api/investor-trading",
     "/api/investor-dates",
 )
-EXPERIMENTAL_URLS = (
+#: OBS-4에서 지운 실험·구버전 라우트(사용자 결정).
+REMOVED_URLS = (
     "/chart-test",
     "/ob-comparison",
     "/api/compare-ob-methods/005930",
@@ -95,20 +96,18 @@ def test_settings_defaults_match_pre_obs4_literals(monkeypatch: pytest.MonkeyPat
         True,
     )
     assert s.chart_max_order_blocks == 30
-    assert (s.host, s.port, s.flask_env, s.experimental_routes) == (
+    assert (s.host, s.port, s.flask_env) == (
         "0.0.0.0",
         5000,
         "production",
-        True,
     )
 
 
 def test_settings_read_legacy_and_new_env_names(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SCREENING_TOP_N", "123")
     monkeypatch.setenv("OBSCREEN_PROXIMITY_WEEKLY", "4.5")
-    monkeypatch.setenv("OBSCREEN_EXPERIMENTAL_ROUTES", "false")
     s = get_settings()
-    assert (s.screening_top_n, s.proximity_weekly, s.experimental_routes) == (123, 4.5, False)
+    assert (s.screening_top_n, s.proximity_weekly) == (123, 4.5)
 
 
 def test_db_path_comes_from_settings() -> None:
@@ -131,25 +130,19 @@ def test_no_hardcoded_server_path_in_code_or_scripts() -> None:
 
 
 @pytest.mark.parametrize("url", SCREEN_URLS)
-def test_screen_urls_survive_experimental_switch(url: str) -> None:
-    for flag in (True, False):
-        adapter = create_app(experimental_routes=flag).url_map.bind("localhost")
-        assert adapter.test(url) is True, (url, flag)
+def test_screen_urls_are_routed(url: str) -> None:
+    assert create_app().url_map.bind("localhost").test(url) is True, url
 
 
-@pytest.mark.parametrize("url", EXPERIMENTAL_URLS)
-def test_experimental_routes_follow_the_switch(url: str) -> None:
-    off = create_app(experimental_routes=False)
-    on = create_app(experimental_routes=True)
-    assert off.url_map.bind("localhost").test(url) is False
-    assert on.url_map.bind("localhost").test(url) is True
+@pytest.mark.parametrize("url", REMOVED_URLS)
+def test_removed_experimental_routes_are_gone(url: str) -> None:
+    assert app_production.app.url_map.bind("localhost").test(url) is False, url
+    assert app_production.app.test_client().get(url).status_code == 404
 
 
-def test_default_app_keeps_experimental_routes() -> None:
-    """기본값은 지금과 같다 — 지울지 끌지는 사용자 확인 사항(OBS-4 §3)."""
-    rules = {r.rule for r in app_production.app.url_map.iter_rules()}
-    assert "/api/compare-ob-methods/<ticker>" in rules
-    assert "/api/chart-data/<ticker>" in rules
+def test_plotly_is_no_longer_a_dependency() -> None:
+    assert "plotly" not in (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert "plotly" not in (REPO_ROOT / "requirements.txt").read_text(encoding="utf-8")
 
 
 def test_static_url_is_unchanged() -> None:

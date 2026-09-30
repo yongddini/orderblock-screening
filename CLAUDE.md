@@ -74,7 +74,6 @@ obscreen/
   web/app.py           # 조합 루트: create_app() · DB_PATH · 탐지기 클래스 · init_db()
   web/deps.py          # Blueprint가 조합 루트 전역을 **호출 시점에** 읽는 창구
   web/pages.py · screening_api.py · investor_api.py · chart_api.py   # Blueprint
-  web/experimental.py  # 실험·구버전 라우트(plotly 포함) — OBSCREEN_EXPERIMENTAL_ROUTES 스위치
 templates/ · static/    # Flask 템플릿·정적 파일(위치·URL 불변 — /static/...)
 daily_screening.sh      # 서버 cron — 스크립트 폴더 기준으로 돈다(경로 하드코딩 없음)
 app_production.py 등    # 호환 별칭(아래)
@@ -101,7 +100,7 @@ tests/                  # pytest — 스모크 + 현행 동작 고정 특성 테
   벤더링하고 `static/js/ob_chart.js`가 캔들 + 존 박스(캔버스 프리미티브 **하나**) + RSI 보조창을
   그린다. 존마다 시리즈를 만들지 말 것(AlphaBlock에서 2,000개에 브라우저가 멈췄다). 순수 함수는
   `tests/test_chart_frontend.py`가 node로 검사한다. plotly `create_chart_html*`·실험 라우트는
-  OBS-4가 `obscreen/web/experimental.py` 한곳에 모았다(지울지 끌지는 사용자 결정 대기).
+  OBS-4가 지웠다(사용자 결정 — plotly 의존성도 제거).
 
 ## 리모델링 방향 (사용자 결정 2026-09-30)
 

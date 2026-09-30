@@ -40,14 +40,13 @@ def init_db() -> None:
     store.init_db(DB_PATH)
 
 
-def create_app(*, experimental_routes: bool | None = None) -> Flask:
+def create_app() -> Flask:
     """Flask 앱을 만든다.
 
-    Args:
-        experimental_routes: 실험·구버전 라우트 등록 여부. `None`이면 설정
-            (`OBSCREEN_EXPERIMENTAL_ROUTES`, 기본 켬)을 따른다.
+    실험·구버전 라우트(plotly `/api/chart*`, `/chart-test`, `/ob-comparison`,
+    `/api/compare-ob-methods/*`, `/api/test-chart/*`)는 OBS-4에서 사용자 결정으로 지웠다.
     """
-    from obscreen.web import chart_api, experimental, investor_api, pages, screening_api
+    from obscreen.web import chart_api, investor_api, pages, screening_api
 
     flask_app = Flask(
         __name__,
@@ -58,10 +57,6 @@ def create_app(*, experimental_routes: bool | None = None) -> Flask:
     flask_app.register_blueprint(investor_api.bp)
     flask_app.register_blueprint(screening_api.bp)
     flask_app.register_blueprint(chart_api.bp)
-    if experimental_routes is None:
-        experimental_routes = get_settings().experimental_routes
-    if experimental_routes:
-        flask_app.register_blueprint(experimental.bp)
     return flask_app
 
 

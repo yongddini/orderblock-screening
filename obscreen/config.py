@@ -43,8 +43,6 @@ class Settings(BaseSettings):
     """개발 서버 포트(`OBSCREEN_PORT`)."""
     flask_env: str = Field("production", validation_alias=_env("FLASK_ENV"))
     """`development`면 `obscreen serve`가 뜨기 전에 스크리닝을 한 번 돌린다(`FLASK_ENV`)."""
-    experimental_routes: bool = Field(True, validation_alias=_env("OBSCREEN_EXPERIMENTAL_ROUTES"))
-    """실험·구버전 라우트 등록 여부(`OBSCREEN_EXPERIMENTAL_ROUTES`) — `web/experimental.py`."""
 
     # ── 스크리닝 대상 ──────────────────────────────────────────────
     screening_top_n: int = Field(400, validation_alias=_env("SCREENING_TOP_N"))
