@@ -6,9 +6,65 @@
 import pandas as pd
 import FinanceDataReader as fdr
 from datetime import datetime, timedelta
+import sys
 import warnings
 
 warnings.filterwarnings("ignore")
+
+
+# 시장 이름 → FDR `StockListing("KRX")`의 `Market` 값들(OBS-7).
+# KOSDAQ GLOBAL은 코스닥 우량주 세그먼트라 코스닥에 포함한다. KONEX는 제외한다.
+MARKET_SEGMENTS = {
+    "KOSPI": ("KOSPI",),
+    "KOSDAQ": ("KOSDAQ", "KOSDAQ GLOBAL"),
+}
+
+# 시가총액(`Marcap` 또는 `Close × Stocks`)을 알 수 없는 종목 비율이 이것을 넘으면
+# 스크리닝을 멈춘다(OBS-7 §5). 실측(2026-09-30)은 0%다 — `Close`·`Stocks`가 전 종목
+# 채워져 온다. 5%는 거래정지·신규상장 몇 종목은 흘려보내되, 열이 통째로 비어 오는
+# 소스 장애(정렬이 사실상 목록 순서가 되는 상황)는 확실히 잡는 선이다.
+MAX_UNRANKED_RATIO = 0.05
+
+
+class MarketCapUnavailableError(RuntimeError):
+    """시가총액 순위를 믿을 수 없어 「시총 상위 N」을 만들 수 없다."""
+
+
+def check_market_cap_coverage(df_market, market, max_ratio=MAX_UNRANKED_RATIO):
+    """
+    시가총액을 모르는 종목 비율을 검사하고, 기준을 넘으면 크게 로그를 남기고 멈춘다.
+
+    Args:
+        df_market (pd.DataFrame): `MarketCapSort` 열이 붙은 종목 목록
+        market (str): 로그용 시장 이름
+        max_ratio (float): 허용하는 미상 비율 상한
+
+    Raises:
+        MarketCapUnavailableError: 목록이 비었거나 미상 비율이 `max_ratio`를 넘을 때
+    """
+    total = len(df_market)
+    if total == 0:
+        message = f"{market} 종목 목록이 비어 있습니다 — 스크리닝을 중단합니다."
+        _log_loud(message)
+        raise MarketCapUnavailableError(message)
+    unranked = int(df_market["MarketCapSort"].isna().sum())
+    ratio = unranked / total
+    if ratio > max_ratio:
+        message = (
+            f"{market} 시가총액을 알 수 없는 종목이 {unranked}/{total}"
+            f"({ratio:.1%}) — 기준 {max_ratio:.0%} 초과. "
+            "Marcap·Close·Stocks가 비어 온 것으로 보입니다. 정렬이 안 된 목록으로 "
+            "「시총 상위 N」을 만들지 않고 스크리닝을 중단합니다."
+        )
+        _log_loud(message)
+        raise MarketCapUnavailableError(message)
+    if unranked:
+        print(f"⚠️  {market} 시가총액 미상 {unranked}/{total}종목 — 순위 맨 뒤로 보냅니다.")
+
+
+def _log_loud(message):
+    bar = "!" * 70
+    print(f"\n{bar}\n🚨 [시가총액 검사 실패] {message}\n{bar}\n", file=sys.stderr, flush=True)
 
 
 class KoreanStockDataProvider:
@@ -24,10 +80,42 @@ class KoreanStockDataProvider:
 
         Returns:
             pd.DataFrame: 종목 정보 데이터프레임
+
+        Note:
+            'KOSDAQ'은 FDR의 `KOSDAQ GLOBAL`(코스닥 우량주 세그먼트)을 포함한다(OBS-7).
+            정확 일치로 거르면 에코프로비엠 같은 코스닥 대형주가 항상 빠진다.
+            KONEX는 포함하지 않는다.
         """
         df_krx = fdr.StockListing("KRX")
-        df_market = df_krx[df_krx["Market"] == market].copy()
+        markets = MARKET_SEGMENTS.get(market, (market,))
+        df_market = df_krx[df_krx["Market"].isin(markets)].copy()
         return df_market
+
+    @staticmethod
+    def add_market_cap(df_market):
+        """
+        정렬용 시가총액 열(`MarketCapSort`)을 붙인다(OBS-7).
+
+        `Marcap`이 있으면 그 값을 쓰고, 비어 있으면 `Close × Stocks`로 계산한다.
+        2026-09-30 실측에서 `fdr.StockListing("KRX")`의 `Marcap`이 전 종목 NaN이었다
+        (`Close`·`Stocks`는 채워져 있었다).
+
+        Returns:
+            pd.DataFrame: `MarketCapSort` 열이 붙은 사본
+        """
+        df = df_market.copy()
+        if "Marcap" in df.columns:
+            marcap = pd.to_numeric(df["Marcap"], errors="coerce")
+        else:
+            marcap = pd.Series(float("nan"), index=df.index)
+        if "Close" in df.columns and "Stocks" in df.columns:
+            computed = pd.to_numeric(df["Close"], errors="coerce") * pd.to_numeric(
+                df["Stocks"], errors="coerce"
+            )
+        else:
+            computed = pd.Series(float("nan"), index=df.index)
+        df["MarketCapSort"] = marcap.fillna(computed)
+        return df
 
     @staticmethod
     def get_top_stocks_by_market_cap(market="KOSPI", top_n=400):
@@ -40,15 +128,41 @@ class KoreanStockDataProvider:
 
         Returns:
             pd.DataFrame: 시가총액 순 정렬된 종목 정보
+
+        Raises:
+            MarketCapUnavailableError: 시가총액을 알 수 없는 종목 비율이
+                `MAX_UNRANKED_RATIO`를 넘을 때. 정렬이 안 된 목록 앞 N개로
+                조용히 스크리닝하지 않는다(OBS-7 §5).
         """
         print(f"Fetching {market} stocks...")
 
         df_market = KoreanStockDataProvider.get_market_stocks(market)
+        df_market = KoreanStockDataProvider.add_market_cap(df_market)
 
-        # 시가총액 기준 정렬 및 상위 N개 선택
-        df_market = df_market.sort_values("Marcap", ascending=False).head(top_n)
+        check_market_cap_coverage(df_market, market)
+
+        # 시가총액 기준 정렬 및 상위 N개 선택(시총을 모르는 종목은 맨 뒤)
+        df_market = df_market.sort_values(
+            "MarketCapSort", ascending=False, na_position="last", kind="stable"
+        ).head(top_n)
 
         return df_market
+
+    @staticmethod
+    def validate_market_caps(markets=("KOSPI", "KOSDAQ")):
+        """
+        스크리닝 전에 시가총액 순위를 만들 수 있는지 미리 검사한다(OBS-7 §5).
+
+        기존 결과를 지우기 **전에** 불러, 소스 장애 날에 전날 결과까지 날리지 않게 한다.
+
+        Raises:
+            MarketCapUnavailableError: 어느 시장이든 기준을 넘으면
+        """
+        for market in markets:
+            df_market = KoreanStockDataProvider.add_market_cap(
+                KoreanStockDataProvider.get_market_stocks(market)
+            )
+            check_market_cap_coverage(df_market, market)
 
     @staticmethod
     def get_price_data(ticker, days=200, end_date=None):

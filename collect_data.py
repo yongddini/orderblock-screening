@@ -7,6 +7,7 @@
 """
 
 import sys
+from data_provider import MarketCapUnavailableError
 from screening_core import run_and_save_screening, run_and_save_investor_data
 
 
@@ -69,12 +70,25 @@ def main():
         print("\n" + "=" * 60)
         print("1️⃣  오더블록 스크리닝")
         print("=" * 60)
-        run_and_save_screening(target_date=target_date)
+        # 시가총액 순위를 못 만들면 스크리닝만 멈추고 수급 수집은 계속한다(OBS-7 §5).
+        # 끝에 종료 코드 1로 실패를 알린다(cron 로그·감시가 보도록).
+        screening_error = None
+        try:
+            run_and_save_screening(target_date=target_date)
+        except MarketCapUnavailableError as e:
+            screening_error = e
+            print(f"❌ 오더블록 스크리닝 중단: {e}", file=sys.stderr)
 
         print("\n" + "=" * 60)
         print("2️⃣  외국인/기관 매매 데이터")
         print("=" * 60)
         run_and_save_investor_data(target_date=target_date)
+
+        if screening_error is not None:
+            print("\n" + "=" * 60)
+            print("❌ 수급 수집은 끝났지만 오더블록 스크리닝이 중단됐습니다.")
+            print("=" * 60)
+            sys.exit(1)
 
         print("\n" + "=" * 60)
         print("✅ 전체 수집 완료!")
