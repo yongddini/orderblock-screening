@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>오더블록 스크리닝</title>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- 차트: TradingView Lightweight Charts v5.2.0 (Apache-2.0, 벤더링 — static/vendor/README.md) -->
+    <script src="{{ url_for('static', filename='vendor/lightweight-charts.standalone.production.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ob_chart.js') }}"></script>
     <style>
         * {
             margin: 0;
@@ -1705,8 +1707,8 @@
             }).join('');
         }
         
-        // ECharts 차트 인스턴스
-        let myChart = null;
+        // 차트 핸들(ObChart.render 반환값) — 모달을 닫거나 일봉/주봉을 바꿀 때 destroy()
+        let obChart = null;
         
         // 차트 타임프레임 전환
         async function switchChartTimeframe(timeframe) {
@@ -1737,15 +1739,17 @@
             modal.classList.add('active');
         document.body.classList.add('modal-open');
             
-            // 탭 표시/숨김 제어
-            if (sourceTimeframe === 'daily' || sourceTimeframe === 'weekly') {
-                chartTabs.style.display = 'none';
-            }
+            // 일봉·주봉 탭은 항상 보인다(OBS-10 — 옛 코드는 여기서 탭을 늘 숨겨 전환이 불가능했다)
+            chartTabs.style.display = 'flex';
             
             // 탭 초기화
             document.querySelectorAll('.chart-tab').forEach(tab => tab.classList.remove('active'));
             document.getElementById('chart-tab-' + sourceTimeframe).classList.add('active');
             
+            if (obChart) {
+                obChart.destroy();
+                obChart = null;
+            }
             container.innerHTML = '<div class="loading"><div class="spinner"></div>차트 로딩 중...</div>';
             
             try {
@@ -1815,9 +1819,7 @@
                 const result = await chartResponse.json();
                 
                 if (result.success) {
-                    container.innerHTML = '';
-                    container.style.height = '800px';
-                    createEChart(result.data, container);
+                    renderChart(result.data, container);
                 } else {
                     container.innerHTML = `<div class="empty-state"><h3>${result.message}</h3></div>`;
                 }
@@ -1828,381 +1830,17 @@
             }
         }
         
-        function createEChart(data, container) {
-            
-            // === 주봉 오더블록 디버깅 ===
-            console.log("📊 === 차트 데이터 디버깅 시작 ===");
-            console.log("1️⃣ 전체 데이터:", data);
-            console.log("2️⃣ 오더블록 데이터:", data.orderblocks);
-            console.log("3️⃣ Bull OB 개수:", data.orderblocks?.bull?.length || 0);
-            console.log("4️⃣ Bear OB 개수:", data.orderblocks?.bear?.length || 0);
-            
-            if (data.orderblocks?.bull?.length > 0) {
-                console.log("5️⃣ 첫 번째 Bull OB:", data.orderblocks.bull[0]);
-                const ob = data.orderblocks.bull[0];
-                if (ob.start_time) {
-                    console.log("   → start_time:", ob.start_time);
-                    console.log("   → 날짜:", new Date(ob.start_time * 1000).toISOString());
-                }
-                if (ob.break_time) {
-                    console.log("   → break_time:", ob.break_time);
-                    console.log("   → 날짜:", new Date(ob.break_time * 1000).toISOString());
-                }
+        // 차트 그리기 — static/js/ob_chart.js (TradingView Lightweight Charts v5, OBS-10)
+        function renderChart(data, container) {
+            if (obChart) {
+                obChart.destroy();
+                obChart = null;
             }
-            
-            if (data.candles?.length > 0) {
-                console.log("6️⃣ 캔들 개수:", data.candles.length);
-                console.log("   → 첫 캔들:", data.candles[0]);
-                console.log("   → 마지막 캔들:", data.candles[data.candles.length - 1]);
-            }
-            console.log("📊 === 디버깅 끝 ===\n");
-            
-            // 디버깅: 오더블록 데이터 확인
-            
-            // 기존 차트 제거
-            if (myChart) {
-                myChart.dispose();
-                myChart = null;
-            }
-            
-            // ECharts 초기화
-            myChart = echarts.init(container);
-            
-            // 캔들 데이터 변환
-            const dates = data.candles.map(c => {
-                const d = new Date(c.time * 1000);
-                return d.toISOString().split('T')[0];
+            const tfLabel = currentChartTimeframe === 'weekly' ? '주봉' : '일봉';
+            obChart = ObChart.render(container, data, {
+                title: `${currentChartCode} ${currentChartName} · ${tfLabel}`,
+                timeframe: currentChartTimeframe,
             });
-            
-            const ohlc = data.candles.map(c => [c.open, c.close, c.low, c.high]);
-            
-            // 오더블록을 markArea 형태로 변환
-            const bullMarkAreas = [];
-            const bearMarkAreas = [];
-            
-            // Bull 오더블록
-            data.orderblocks.bull.forEach(ob => {
-                if (!ob.start_time) return;
-                
-                const startDate = new Date(ob.start_time * 1000).toISOString().split('T')[0];
-                const endDate = ob.break_time 
-                    ? new Date(ob.break_time * 1000).toISOString().split('T')[0] 
-                    : dates[dates.length - 1];
-                
-                const opacity = ob.breaker ? 0.1 : (ob.combined ? 0.27 : 0.47);
-                const color = ob.breaker ? [117, 117, 117] : [38, 166, 154];
-                
-                bullMarkAreas.push([
-                    {
-                        xAxis: startDate,
-                        yAxis: ob.top,
-                        itemStyle: {
-                            color: `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${opacity})`,
-                            borderColor: `rgb(${color[0]}, ${color[1]}, ${color[2]})`,
-                            borderWidth: 1
-                        }
-                    },
-                    {
-                        xAxis: endDate,
-                        yAxis: ob.bottom
-                    }
-                ]);
-            });
-            
-            console.log("7️⃣ bullMarkAreas 생성 완료:", bullMarkAreas.length, "개");
-            if (bullMarkAreas.length > 0) {
-                console.log("   → 첫 번째:", bullMarkAreas[0]);
-            }
-            
-            // Bear 오더블록
-            data.orderblocks.bear.forEach(ob => {
-                if (!ob.start_time) return;
-                
-                const startDate = new Date(ob.start_time * 1000).toISOString().split('T')[0];
-                const endDate = ob.break_time 
-                    ? new Date(ob.break_time * 1000).toISOString().split('T')[0] 
-                    : dates[dates.length - 1];
-                
-                const opacity = ob.breaker ? 0.1 : (ob.combined ? 0.27 : 0.53);
-                const color = ob.breaker ? [117, 117, 117] : [239, 83, 80];
-                
-                bearMarkAreas.push([
-                    {
-                        xAxis: startDate,
-                        yAxis: ob.top,
-                        itemStyle: {
-                            color: `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${opacity})`,
-                            borderColor: `rgb(${color[0]}, ${color[1]}, ${color[2]})`,
-                            borderWidth: 1
-                        }
-                    },
-                    {
-                        xAxis: endDate,
-                        yAxis: ob.bottom
-                    }
-                ]);
-            });
-            
-            console.log("8️⃣ bearMarkAreas 생성 완료:", bearMarkAreas.length, "개");
-            if (bearMarkAreas.length > 0) {
-                console.log("   → 첫 번째:", bearMarkAreas[0]);
-            }
-            
-            // RSI 데이터
-            const rsiValues = data.rsi.map(r => r.value);
-            const rsiEmaValues = data.rsi_ema.map(r => r.value);
-            
-            const option = {
-                backgroundColor: '#1e1e1e',
-                // 🎯 부드러운 애니메이션 설정
-                animation: true,
-                animationDuration: 150,          // 150ms (빠르고 부드럽게)
-                animationEasing: 'cubicOut',     // 부드러운 곡선
-                animationThreshold: 2000,        // 많은 데이터에서도 애니메이션
-
-                tooltip: {
-                    trigger: 'axis',
-                    // show: true (웹), false는 모바일 롱프레스에서 제어
-                    axisPointer: {
-                        type: 'cross'
-                    },
-                    backgroundColor: 'rgba(50, 50, 50, 0.9)',
-                    borderColor: '#777',
-                    textStyle: {
-                        color: '#fff'
-                    },
-                    position: function (point, params, dom, rect, size) {
-                        // 좌측 상단 고정
-                        return [10, 10];
-                    },
-                    confine: true,
-                    formatter: function (params) {
-                        if (params.length === 0) return '';
-                        const p = params[0];
-                        if (!p.data) return '';
-                        
-                        // 한 줄로 표시
-                        return `날짜: ${p.axisValue} | 시: ${p.data[0]?.toLocaleString() || '-'} 고: ${p.data[3]?.toLocaleString() || '-'} 저: ${p.data[2]?.toLocaleString() || '-'} 종: ${p.data[1]?.toLocaleString() || '-'}`;
-                    }
-                },
-                axisPointer: {
-                    link: [{xAxisIndex: 'all'}]
-                },
-                dataZoom: [
-                {
-                    type: 'inside',
-                    xAxisIndex: [0, 1],
-                    start: 50,
-                    end: 100,
-                    
-                    // 마우스 조작 설정
-                    zoomOnMouseWheel: true,         // 휠: 확대/축소 (위: 확대, 아래: 축소)
-                    moveOnMouseMove: true,          // 드래그: 이동 (ECharts 기본 동작)
-                    moveOnMouseWheel: false,        // 휠로 이동은 안 함
-                    
-                    // 부드러움 설정
-                    throttle: 30,                   // 30ms 간격 (더 부드럽게)
-                    zoomLock: false,                // 확대/축소 활성화
-                    
-                    // 민감도 (기본값)
-                    ensitivity: 1,                 // 1로 낮춤 (너무 빠르지 않게)
-
-                    // 기본 동작 허용
-                    preventDefaultMouseMove: false  // ECharts 기본 드래그 허용
-                }
-            ],
-                grid: [
-                    {
-                        left: 60,
-                        right: 60,
-                        top: 40,
-                        height: '55%',
-                        borderColor: '#3a3a3a'
-                    },
-                    {
-                        left: 60,
-                        right: 60,
-                        top: '70%',
-                        height: '18%',
-                        borderColor: '#3a3a3a'
-                    }
-                ],
-                xAxis: [
-                    {
-                        type: 'category',
-                        data: dates,
-                        boundaryGap: false,
-                        axisLine: { lineStyle: { color: '#3a3a3a' } },
-                        axisLabel: { color: '#aaa', show: false },
-                        axisTick: { show: false },
-                        splitLine: { lineStyle: { color: '#3a3a3a' } },
-                        min: 'dataMin',
-                        max: 'dataMax'
-                    },
-                    {
-                        type: 'category',
-                        gridIndex: 1,
-                        data: dates,
-                        boundaryGap: false,
-                        axisLine: { lineStyle: { color: '#3a3a3a' } },
-                        axisLabel: { color: '#aaa' },
-                        axisTick: { show: false },
-                        splitLine: { show: false },
-                        min: 'dataMin',
-                        max: 'dataMax'
-                    }
-                ],
-                yAxis: [
-                    {
-                        scale: true,
-                        position: 'right',
-                        axisLine: { lineStyle: { color: '#3a3a3a' } },
-                        axisLabel: { 
-                            color: '#aaa',
-                            formatter: function(value) {
-                                return value.toLocaleString();
-                            }
-                        },
-                        splitLine: { lineStyle: { color: '#3a3a3a' } }
-                    },
-                    {
-                        scale: true,
-                        gridIndex: 1,
-                        position: 'right',
-                        min: 0,
-                        max: 100,
-                        axisLine: { lineStyle: { color: '#3a3a3a' } },
-                        axisLabel: { color: '#aaa' },
-                        splitLine: { lineStyle: { color: '#3a3a3a' } }
-                    }
-                ],
-            
-            
-                series: [
-                    {
-                        name: '가격',
-                        type: 'candlestick',
-                        data: ohlc,
-                        itemStyle: {
-                            color: '#26a69a',
-                            color0: '#ef5350',
-                            borderColor: '#26a69a',
-                            borderColor0: '#ef5350'
-                        },
-                    
-                        markArea: {
-                            silent: true,
-                            data: [...bullMarkAreas, ...bearMarkAreas]
-                        }
-                    },
-                    {
-                        name: 'RSI',
-                        type: 'line',
-                        xAxisIndex: 1,
-                        yAxisIndex: 1,
-                        data: rsiValues,
-                        lineStyle: {
-                            color: '#7E57C2',
-                            width: 2
-                        },
-                        showSymbol: false
-                    },
-                    {
-                        name: 'RSI EMA',
-                        type: 'line',
-                        xAxisIndex: 1,
-                        yAxisIndex: 1,
-                        data: rsiEmaValues,
-                        lineStyle: {
-                            color: '#FFEB3B',
-                            width: 2
-                        },
-                        showSymbol: false
-                    }
-                ]
-            };
-            
-            // 최종 markArea 확인
-            console.log("9️⃣ 최종 markArea 데이터:");
-            console.log("   → Bull:", bullMarkAreas.length, "개");
-            console.log("   → Bear:", bearMarkAreas.length, "개");
-            console.log("   → 합계:", bullMarkAreas.length + bearMarkAreas.length, "개");
-            
-            myChart.setOption(option);
-            
-
-        // 트레이딩뷰 스타일 터치 동작
-        let longPressTimer = null;
-        let isLongPressMode = false;
-        let chartDom = container;
-        
-        chartDom.addEventListener('touchstart', function(e) {
-            if (e.touches.length === 1) {
-                longPressTimer = setTimeout(() => {
-                    isLongPressMode = true;
-                    // 햅틱 피드백 (지원되는 경우)
-                    if (navigator.vibrate) {
-                        navigator.vibrate(50);
-                    }
-                    // 툴팁 표시 + 드래그 비활성화
-                    myChart.setOption({
-                        tooltip: {
-                            show: true,
-                            position: function() {
-                                return [10, 10]; // 좌측 상단 고정
-                            }
-                        },
-                        dataZoom: [{
-                            type: 'inside',
-                            xAxisIndex: [0, 1],
-                            disabled: true
-                        }]
-                    });
-                }, 500); // 500ms 롱 프레스
-            }
-        }, { passive: true });
-        
-        chartDom.addEventListener('touchmove', function(e) {
-            if (isLongPressMode) {
-                // 롱프레스 모드에서는 드래그 방지
-                e.preventDefault();
-            }
-        }, { passive: false });
-        
-        chartDom.addEventListener('touchend', function(e) {
-            clearTimeout(longPressTimer);
-            if (isLongPressMode) {
-                isLongPressMode = false;
-                // 툴팁 숨김 + 드래그 다시 활성화
-                myChart.setOption({
-                    tooltip: {
-                        show: false
-                    },
-                    dataZoom: [{
-                        type: 'inside',
-                        xAxisIndex: [0, 1],
-                        disabled: false,
-                        zoomOnMouseWheel: true,
-                        moveOnMouseMove: true,
-                        moveOnMouseWheel: true,
-                        throttle: 30,
-                        sensitivity: 0.5
-                    }]
-                });
-            }
-        }, { passive: true });
-        
-        chartDom.addEventListener('touchcancel', function(e) {
-            clearTimeout(longPressTimer);
-            isLongPressMode = false;
-        }, { passive: true });
-        
-            // 리사이즈
-            const resizeHandler = () => {
-                if (myChart) myChart.resize();
-            };
-            window.removeEventListener('resize', resizeHandler);
-            window.addEventListener('resize', resizeHandler);
         }
         
         // 모달 닫기
@@ -2213,9 +1851,9 @@
             modal.classList.remove('active');
             document.body.classList.remove('modal-open');
             
-            if (myChart) {
-                myChart.dispose();
-                myChart = null;
+            if (obChart) {
+                obChart.destroy();
+                obChart = null;
             }
         }
         
