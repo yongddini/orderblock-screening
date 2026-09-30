@@ -101,7 +101,8 @@ def run_and_save_screening(target_date=None):
         return
 
     # Holiday check (using holidays library)
-    if KR_HOLIDAYS and today in KR_HOLIDAYS:
+    # `is not None` — 막 만든 holidays 객체는 연도를 지연 생성해 bool()이 거짓이다(OBS-9).
+    if KR_HOLIDAYS is not None and today in KR_HOLIDAYS:
         holiday_name = KR_HOLIDAYS.get(today)
         print(f"Holiday {today} ({holiday_name}), skipping screening.")
         return

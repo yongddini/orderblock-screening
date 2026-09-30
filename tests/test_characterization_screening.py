@@ -7,6 +7,7 @@ run_and_save_screening`의 DB 저장(추천 플래그 포함)을 고정 입력�
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -195,18 +196,48 @@ def test_run_and_save_screening_skips_weekend(fake_fdr: FakeFdr, fresh_db: Path)
     assert query_rows(fresh_db, "SELECT * FROM screening_results") == []
 
 
-def test_run_and_save_screening_does_not_skip_weekday_holiday(
+@pytest.mark.parametrize("holiday", ["20260925", "20261009"])
+def test_run_and_save_screening_skips_weekday_holiday(
+    holiday: str, fake_fdr: FakeFdr, fresh_db: Path
+) -> None:
+    """평일 공휴일(2026-09-25 추석 · 2026-10-09 한글날)은 조회도 저장도 하지 않는다(OBS-9).
+
+    옛 코드는 `if KR_HOLIDAYS and today in KR_HOLIDAYS`였는데 `holidays.SouthKorea()`는
+    연도를 지연 생성해 막 만든 객체의 `bool()`이 거짓이라 `in` 검사까지 가지 않았다
+    (OBS-3이 그 동작을 `..._does_not_skip_weekday_holiday`로 고정해 뒀다 — 이 테스트가 뒤집은 것).
+    """
+    screening_core.run_and_save_screening(holiday)
+    assert fake_fdr.calls == []
+    assert query_rows(fresh_db, "SELECT COUNT(*) AS n FROM screening_results")[0]["n"] == 0
+
+
+def test_run_and_save_screening_runs_on_business_day_after_holiday(
     fake_fdr: FakeFdr, fresh_db: Path
 ) -> None:
-    """⚠️ 현행 동작(버그 후보): 평일 공휴일(2026-09-25 추석)을 **건너뛰지 않는다.**
+    """공휴일 판정이 평일 영업일까지 막지는 않는다 — 추석 연휴 다음 영업일(2026-09-28 월)."""
+    import holidays
 
-    `if KR_HOLIDAYS and today in KR_HOLIDAYS` — `holidays.SouthKorea()`는 연도를 지연
-    생성해 막 만든 객체의 `bool()`이 거짓이라 `in` 검사까지 가지 않는다. 수정은 이 이슈
-    범위 밖이라(스냅샷은 지금 동작 그대로) 고정만 해 둔다. 고치면 이 테스트를 뒤집는다.
-    """
-    screening_core.run_and_save_screening("20260925")
+    assert date(2026, 9, 28) not in holidays.SouthKorea()
+    screening_core.run_and_save_screening("20260928")
     assert fake_fdr.calls != []
-    assert query_rows(fresh_db, "SELECT COUNT(*) AS n FROM screening_results")[0]["n"] > 0
+
+
+def test_app_production_holiday_guard_is_not_truthiness(
+    monkeypatch: pytest.MonkeyPatch, fake_fdr: FakeFdr, fresh_db: Path
+) -> None:
+    """`app_production`의 같은 검사도 고쳤다 — 전역 객체가 비어 있어도(거짓) 공휴일을 본다."""
+    import holidays
+
+    import app_production
+
+    assert app_production.KR_HOLIDAYS is not None
+    # 연도를 아직 안 채운 새 객체 = 「비어 있어서 bool()이 거짓」인 상태를 재현한다.
+    fresh = holidays.SouthKorea()
+    assert not fresh
+    monkeypatch.setattr(app_production, "KR_HOLIDAYS", fresh)
+    app_production.run_and_save_screening("20260925")
+    assert fake_fdr.calls == []
+    assert query_rows(fresh_db, "SELECT COUNT(*) AS n FROM screening_results")[0]["n"] == 0
 
 
 def _record(

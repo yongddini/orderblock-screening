@@ -34,7 +34,9 @@ def run_and_save_screening(target_date=None):
         import holidays
 
         KR_HOLIDAYS = holidays.SouthKorea()
-        if KR_HOLIDAYS and today in KR_HOLIDAYS:
+        # `bool(KR_HOLIDAYS)`로 거르지 말 것 — 연도를 지연 생성해 막 만든 객체는 비어 있어
+        # 거짓이고, 그러면 평일 공휴일(추석 등)에도 스크리닝이 돈다(OBS-9).
+        if today in KR_HOLIDAYS:
             holiday_name = KR_HOLIDAYS.get(today)
             print(f"🎉 {today} 공휴일({holiday_name})이므로 스크리닝을 건너뜁니다.")
             return
