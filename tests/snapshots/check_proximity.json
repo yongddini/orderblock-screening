@@ -1,0 +1,390 @@
+{
+ "000660": {
+  "daily_1.0": {
+   "change_percent": -7.119205298013245,
+   "current_price": 1683000,
+   "distance_percent": 0,
+   "ob_bottom": 1557000,
+   "ob_top": 1687000,
+   "ob_type": "Bull",
+   "rsi": 47.899227572194604,
+   "status": "내부-지지",
+   "trading_value": 6734606967000
+  },
+  "daily_3.0": {
+   "change_percent": -7.119205298013245,
+   "current_price": 1683000,
+   "distance_percent": 0,
+   "ob_bottom": 1557000,
+   "ob_top": 1687000,
+   "ob_type": "Bull",
+   "rsi": 47.899227572194604,
+   "status": "내부-지지",
+   "trading_value": 6734606967000
+  },
+  "daily_50.0": {
+   "change_percent": -7.119205298013245,
+   "current_price": 1683000,
+   "distance_percent": 0,
+   "ob_bottom": 1557000,
+   "ob_top": 1687000,
+   "ob_type": "Bull",
+   "rsi": 47.899227572194604,
+   "status": "내부-지지",
+   "trading_value": 6734606967000
+  },
+  "weekly_5.0": null,
+  "weekly_50.0": null
+ },
+ "003490": {
+  "daily_1.0": null,
+  "daily_3.0": null,
+  "daily_50.0": {
+   "change_percent": 2.4179620034542317,
+   "current_price": 29650,
+   "distance_percent": 15.177065767284992,
+   "ob_bottom": 24400,
+   "ob_top": 25150,
+   "ob_type": "Bull",
+   "rsi": 61.56070292368302,
+   "status": "근접-지지",
+   "trading_value": 61622781000
+  },
+  "weekly_5.0": {
+   "change_percent": 2.4179620034542317,
+   "current_price": 29650.0,
+   "distance_percent": 4.3844856661045535,
+   "ob_bottom": 30950.0,
+   "ob_top": 32550.0,
+   "ob_type": "Bear",
+   "rsi": 60.053832402619605,
+   "status": "근접-저항",
+   "trading_value": 61622781000.0
+  },
+  "weekly_50.0": {
+   "change_percent": 2.4179620034542317,
+   "current_price": 29650.0,
+   "distance_percent": 14.333895446880272,
+   "ob_bottom": 22000.0,
+   "ob_top": 25400.0,
+   "ob_type": "Bull",
+   "rsi": 60.053832402619605,
+   "status": "근접-지지",
+   "trading_value": 61622781000.0
+  }
+ },
+ "005930": {
+  "daily_1.0": null,
+  "daily_3.0": null,
+  "daily_50.0": {
+   "change_percent": -4.238921001926782,
+   "current_price": 248500,
+   "distance_percent": 29.698189134808857,
+   "ob_bottom": 167000,
+   "ob_top": 174700,
+   "ob_type": "Bull",
+   "rsi": 44.535281690360364,
+   "status": "근접-지지",
+   "trading_value": 4417360353000
+  },
+  "weekly_5.0": null,
+  "weekly_50.0": null
+ },
+ "012800": {
+  "daily_1.0": null,
+  "daily_3.0": null,
+  "daily_50.0": null,
+  "weekly_5.0": null,
+  "weekly_50.0": {
+   "change_percent": 0.0,
+   "current_price": 1197.0,
+   "distance_percent": 19.799498746867165,
+   "ob_bottom": 676.0,
+   "ob_top": 960.0,
+   "ob_type": "Bull",
+   "rsi": 45.60911947412104,
+   "status": "근접-지지",
+   "trading_value": 557841501.0
+  }
+ },
+ "035420": {
+  "daily_1.0": null,
+  "daily_3.0": null,
+  "daily_50.0": {
+   "change_percent": -1.694915254237288,
+   "current_price": 203000,
+   "distance_percent": 10.689655172413794,
+   "ob_bottom": 176200,
+   "ob_top": 181300,
+   "ob_type": "Bull",
+   "rsi": 41.78626692558146,
+   "status": "근접-지지",
+   "trading_value": 78060808000
+  },
+  "weekly_5.0": {
+   "change_percent": -1.694915254237288,
+   "current_price": 203000.0,
+   "distance_percent": 3.842364532019704,
+   "ob_bottom": 176200.0,
+   "ob_top": 195200.0,
+   "ob_type": "Bull",
+   "rsi": 43.88425088283877,
+   "status": "근접-지지",
+   "trading_value": 78060808000.0
+  },
+  "weekly_50.0": {
+   "change_percent": -1.694915254237288,
+   "current_price": 203000.0,
+   "distance_percent": 3.842364532019704,
+   "ob_bottom": 176200.0,
+   "ob_top": 195200.0,
+   "ob_type": "Bull",
+   "rsi": 43.88425088283877,
+   "status": "근접-지지",
+   "trading_value": 78060808000.0
+  }
+ },
+ "041510": {
+  "daily_1.0": null,
+  "daily_3.0": null,
+  "daily_50.0": {
+   "change_percent": 2.976190476190476,
+   "current_price": 86500,
+   "distance_percent": 18.034682080924856,
+   "ob_bottom": 63900,
+   "ob_top": 70900,
+   "ob_type": "Bull",
+   "rsi": 67.77726076103241,
+   "status": "근접-지지",
+   "trading_value": 15551489000
+  },
+  "weekly_5.0": null,
+  "weekly_50.0": {
+   "change_percent": 2.976190476190476,
+   "current_price": 86500.0,
+   "distance_percent": 31.90751445086705,
+   "ob_bottom": 55100.0,
+   "ob_top": 58900.0,
+   "ob_type": "Bull",
+   "rsi": 52.19750227595457,
+   "status": "근접-지지",
+   "trading_value": 15551489000.0
+  }
+ },
+ "051910": {
+  "daily_1.0": null,
+  "daily_3.0": null,
+  "daily_50.0": {
+   "change_percent": -2.0146520146520146,
+   "current_price": 267500,
+   "distance_percent": 29.53271028037383,
+   "ob_bottom": 181500,
+   "ob_top": 188500,
+   "ob_type": "Bull",
+   "rsi": 46.993842287524146,
+   "status": "근접-지지",
+   "trading_value": 42877307500
+  },
+  "weekly_5.0": null,
+  "weekly_50.0": {
+   "change_percent": -2.0146520146520146,
+   "current_price": 267500.0,
+   "distance_percent": 24.299065420560748,
+   "ob_bottom": 181500.0,
+   "ob_top": 202500.0,
+   "ob_type": "Bull",
+   "rsi": 42.65643354083765,
+   "status": "근접-지지",
+   "trading_value": 42877307500.0
+  }
+ },
+ "069500": {
+  "daily_1.0": null,
+  "daily_3.0": null,
+  "daily_50.0": {
+   "change_percent": -3.735159817351598,
+   "current_price": 105410,
+   "distance_percent": 26.409259083578405,
+   "ob_bottom": 74627,
+   "ob_top": 77572,
+   "ob_type": "Bull",
+   "rsi": 46.583388848113856,
+   "status": "근접-지지",
+   "trading_value": 2636191100480
+  },
+  "weekly_5.0": null,
+  "weekly_50.0": null
+ },
+ "086520": {
+  "daily_1.0": null,
+  "daily_3.0": null,
+  "daily_50.0": {
+   "change_percent": -4.857819905213271,
+   "current_price": 80300,
+   "distance_percent": 38.7920298879203,
+   "ob_bottom": 45550,
+   "ob_top": 49150,
+   "ob_type": "Bull",
+   "rsi": 43.22114234769228,
+   "status": "근접-지지",
+   "trading_value": 53254879700
+  },
+  "weekly_5.0": null,
+  "weekly_50.0": null
+ },
+ "196170": {
+  "daily_1.0": null,
+  "daily_3.0": null,
+  "daily_50.0": {
+   "change_percent": -3.731343283582089,
+   "current_price": 258000,
+   "distance_percent": 7.248449612403101,
+   "ob_bottom": 194671,
+   "ob_top": 239299,
+   "ob_type": "Bull",
+   "rsi": 37.943627427576125,
+   "status": "근접-지지",
+   "trading_value": 103983804000
+  },
+  "weekly_5.0": null,
+  "weekly_50.0": {
+   "change_percent": -3.731343283582089,
+   "current_price": 258000.0,
+   "distance_percent": 40.85968992248062,
+   "ob_bottom": 120188.0,
+   "ob_top": 152582.0,
+   "ob_type": "Bull",
+   "rsi": 44.2868583796533,
+   "status": "근접-지지",
+   "trading_value": 103983804000.0
+  }
+ },
+ "228670": {
+  "daily_1.0": {
+   "change_percent": -0.8629989212513484,
+   "current_price": 4595,
+   "distance_percent": 0.7616974972796519,
+   "ob_bottom": 3680,
+   "ob_top": 4560,
+   "ob_type": "Bull",
+   "rsi": 44.22104703190342,
+   "status": "근접-지지",
+   "trading_value": 106332895
+  },
+  "daily_3.0": {
+   "change_percent": -0.8629989212513484,
+   "current_price": 4595,
+   "distance_percent": 0.7616974972796519,
+   "ob_bottom": 3680,
+   "ob_top": 4560,
+   "ob_type": "Bull",
+   "rsi": 44.22104703190342,
+   "status": "근접-지지",
+   "trading_value": 106332895
+  },
+  "daily_50.0": {
+   "change_percent": -0.8629989212513484,
+   "current_price": 4595,
+   "distance_percent": 0.7616974972796519,
+   "ob_bottom": 3680,
+   "ob_top": 4560,
+   "ob_type": "Bull",
+   "rsi": 44.22104703190342,
+   "status": "근접-지지",
+   "trading_value": 106332895
+  },
+  "weekly_5.0": null,
+  "weekly_50.0": null
+ },
+ "229200": {
+  "daily_1.0": null,
+  "daily_3.0": null,
+  "daily_50.0": {
+   "change_percent": -1.8424855491329482,
+   "current_price": 13585,
+   "distance_percent": 47.2211998527788,
+   "ob_bottom": 20000,
+   "ob_top": 21725,
+   "ob_type": "Bear",
+   "rsi": 45.645075449663615,
+   "status": "근접-저항",
+   "trading_value": 308237169955
+  },
+  "weekly_5.0": null,
+  "weekly_50.0": {
+   "change_percent": -1.8424855491329482,
+   "current_price": 13585.0,
+   "distance_percent": 28.80382775119617,
+   "ob_bottom": 9207.0,
+   "ob_top": 9672.0,
+   "ob_type": "Bull",
+   "rsi": 40.03905202029244,
+   "status": "근접-지지",
+   "trading_value": 308237169955.0
+  }
+ },
+ "247540": {
+  "daily_1.0": null,
+  "daily_3.0": null,
+  "daily_50.0": {
+   "change_percent": -6.165004533091569,
+   "current_price": 103500,
+   "distance_percent": 19.07246376811594,
+   "ob_bottom": 79823,
+   "ob_top": 83760,
+   "ob_type": "Bull",
+   "rsi": 43.90654027510399,
+   "status": "근접-지지",
+   "trading_value": 39198141000
+  },
+  "weekly_5.0": null,
+  "weekly_50.0": {
+   "change_percent": -6.165004533091569,
+   "current_price": 103500,
+   "distance_percent": 13.176811594202897,
+   "ob_bottom": 79823,
+   "ob_top": 89862,
+   "ob_type": "Bull",
+   "rsi": 37.58938353386954,
+   "status": "근접-지지",
+   "trading_value": 39198141000
+  }
+ },
+ "360750": {
+  "daily_1.0": null,
+  "daily_3.0": null,
+  "daily_50.0": {
+   "change_percent": 0.019654088050314468,
+   "current_price": 25445,
+   "distance_percent": 6.079779917469051,
+   "ob_bottom": 23602,
+   "ob_top": 23898,
+   "ob_type": "Bull",
+   "rsi": 28.118944938269465,
+   "status": "근접-지지",
+   "trading_value": 683190260270
+  },
+  "weekly_5.0": {
+   "change_percent": 0.019654088050314468,
+   "current_price": 25445,
+   "distance_percent": 3.371978777755944,
+   "ob_bottom": 23602,
+   "ob_top": 24587,
+   "ob_type": "Bull",
+   "rsi": 41.64406105978825,
+   "status": "근접-지지",
+   "trading_value": 683190260270
+  },
+  "weekly_50.0": {
+   "change_percent": 0.019654088050314468,
+   "current_price": 25445,
+   "distance_percent": 3.371978777755944,
+   "ob_bottom": 23602,
+   "ob_top": 24587,
+   "ob_type": "Bull",
+   "rsi": 41.64406105978825,
+   "status": "근접-지지",
+   "trading_value": 683190260270
+  }
+ }
+}

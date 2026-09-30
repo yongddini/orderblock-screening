@@ -1,0 +1,135 @@
+{
+ "candles": {
+  "count": 500,
+  "first": {
+   "close": 156221.0,
+   "high": 160826.0,
+   "low": 153416.0,
+   "open": 160226.0,
+   "time": 1487289600
+  },
+  "last": {
+   "close": 203000.0,
+   "high": 206500.0,
+   "low": 202000.0,
+   "open": 203000.0,
+   "time": 1789689600
+  }
+ },
+ "orderblocks": {
+  "bear": [
+   {
+    "bottom": 433000.0,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "start_time": 1627603200,
+    "top": 465000.0
+   },
+   {
+    "bottom": 324000.0,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "start_time": 1647561600,
+    "top": 348000.0
+   },
+   {
+    "bottom": 401500.0,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "start_time": 1635465600,
+    "top": 419500.0
+   }
+  ],
+  "bull": [
+   {
+    "bottom": 176200.0,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "start_time": 1744329600,
+    "top": 195200.0
+   },
+   {
+    "bottom": 151100.0,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "start_time": 1723161600,
+    "top": 170000.0
+   },
+   {
+    "bottom": 334500.0,
+    "break_time": 1642118400,
+    "breaker": true,
+    "combined": false,
+    "start_time": 1620950400,
+    "top": 364000.0
+   }
+  ]
+ },
+ "rsi": {
+  "count": 499,
+  "last": {
+   "time": 1789689600,
+   "value": 43.88425088283877
+  }
+ },
+ "rsi_ema": {
+  "count": 499,
+  "last": {
+   "time": 1789689600,
+   "value": 46.68115620235532
+  }
+ },
+ "shape": {
+  "data": {
+   "candles": [
+    {
+     "close": "float",
+     "high": "float",
+     "low": "float",
+     "open": "float",
+     "time": "int"
+    }
+   ],
+   "orderblocks": {
+    "bear": [
+     {
+      "bottom": "float",
+      "break_time": "null",
+      "breaker": "bool",
+      "combined": "bool",
+      "start_time": "int",
+      "top": "float"
+     }
+    ],
+    "bull": [
+     {
+      "bottom": "float",
+      "break_time": "null",
+      "breaker": "bool",
+      "combined": "bool",
+      "start_time": "int",
+      "top": "float"
+     }
+    ]
+   },
+   "rsi": [
+    {
+     "time": "int",
+     "value": "float"
+    }
+   ],
+   "rsi_ema": [
+    {
+     "time": "int",
+     "value": "float"
+    }
+   ]
+  },
+  "success": "bool"
+ }
+}

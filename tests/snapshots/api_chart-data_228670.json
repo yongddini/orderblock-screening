@@ -1,0 +1,85 @@
+{
+ "candles": {
+  "count": 498,
+  "first": {
+   "close": 8710.0,
+   "high": 8950.0,
+   "low": 8640.0,
+   "open": 8680.0,
+   "time": 1724630400
+  },
+  "last": {
+   "close": 4595.0,
+   "high": 4665.0,
+   "low": 4485.0,
+   "open": 4665.0,
+   "time": 1789344000
+  }
+ },
+ "orderblocks": {
+  "bear": [],
+  "bull": [
+   {
+    "bottom": 3680.0,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "start_time": 1785369600,
+    "top": 4560.0
+   }
+  ]
+ },
+ "rsi": {
+  "count": 497,
+  "last": {
+   "time": 1789344000,
+   "value": 44.2210470319034
+  }
+ },
+ "rsi_ema": {
+  "count": 497,
+  "last": {
+   "time": 1789344000,
+   "value": 45.3340396674481
+  }
+ },
+ "shape": {
+  "data": {
+   "candles": [
+    {
+     "close": "float",
+     "high": "float",
+     "low": "float",
+     "open": "float",
+     "time": "int"
+    }
+   ],
+   "orderblocks": {
+    "bear": [],
+    "bull": [
+     {
+      "bottom": "float",
+      "break_time": "null",
+      "breaker": "bool",
+      "combined": "bool",
+      "start_time": "int",
+      "top": "float"
+     }
+    ]
+   },
+   "rsi": [
+    {
+     "time": "int",
+     "value": "float"
+    }
+   ],
+   "rsi_ema": [
+    {
+     "time": "int",
+     "value": "float"
+    }
+   ]
+  },
+  "success": "bool"
+ }
+}

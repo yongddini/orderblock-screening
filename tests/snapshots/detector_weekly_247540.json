@@ -1,0 +1,328 @@
+{
+ "bars": 394,
+ "first": "2019-03-08T00:00:00",
+ "last": "2026-09-18T00:00:00",
+ "latest_combine_False": {
+  "bear": [
+   {
+    "bb_volume": 0,
+    "bottom": 265257,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 1725145,
+    "ob_low_volume": 4059957,
+    "ob_volume": 5785102,
+    "start_time": "2024-03-29T00:00:00",
+    "top": 293801,
+    "type": "Bear"
+   }
+  ],
+  "bull": [
+   {
+    "bb_volume": 0,
+    "bottom": 79823,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 19658128,
+    "ob_low_volume": 2099090,
+    "ob_volume": 21757218,
+    "start_time": "2025-05-30T00:00:00",
+    "top": 89862,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 79823,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 9534043,
+    "ob_low_volume": 1198020,
+    "ob_volume": 10732063,
+    "start_time": "2025-05-30T00:00:00",
+    "top": 89862,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 35311,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 589556,
+    "ob_low_volume": 93848,
+    "ob_volume": 683404,
+    "start_time": "2021-03-12T00:00:00",
+    "top": 42436,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 27188,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 562804,
+    "ob_low_volume": 500948,
+    "ob_volume": 1063752,
+    "start_time": "2020-10-30T00:00:00",
+    "top": 31346,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 10833,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 2534641,
+    "ob_low_volume": 248069,
+    "ob_volume": 2782710,
+    "start_time": "2019-10-11T00:00:00",
+    "top": 12183,
+    "type": "Bull"
+   }
+  ]
+ },
+ "latest_combine_True": {
+  "bear": [
+   {
+    "bb_volume": 0,
+    "bottom": 265257,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 1725145,
+    "ob_low_volume": 4059957,
+    "ob_volume": 5785102,
+    "start_time": "2024-03-29T00:00:00",
+    "top": 293801,
+    "type": "Bear"
+   }
+  ],
+  "bull": [
+   {
+    "bb_volume": 0,
+    "bottom": 79823,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 29192171,
+    "ob_low_volume": 3297110,
+    "ob_volume": 32489281,
+    "start_time": "2025-05-30T00:00:00",
+    "top": 89862,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 35311,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 589556,
+    "ob_low_volume": 93848,
+    "ob_volume": 683404,
+    "start_time": "2021-03-12T00:00:00",
+    "top": 42436,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 27188,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 562804,
+    "ob_low_volume": 500948,
+    "ob_volume": 1063752,
+    "start_time": "2020-10-30T00:00:00",
+    "top": 31346,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 10833,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 2534641,
+    "ob_low_volume": 248069,
+    "ob_volume": 2782710,
+    "start_time": "2019-10-11T00:00:00",
+    "top": 12183,
+    "type": "Bull"
+   }
+  ]
+ },
+ "raw_Close": {
+  "bear": [
+   {
+    "bb_volume": 0,
+    "bottom": 265257,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 1725145,
+    "ob_low_volume": 4059957,
+    "ob_volume": 5785102,
+    "start_time": "2024-03-29T00:00:00",
+    "top": 293801,
+    "type": "Bear"
+   }
+  ],
+  "bull": [
+   {
+    "bb_volume": 0,
+    "bottom": 79823,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 19658128,
+    "ob_low_volume": 2099090,
+    "ob_volume": 21757218,
+    "start_time": "2025-05-30T00:00:00",
+    "top": 89862,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 79823,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 9534043,
+    "ob_low_volume": 1198020,
+    "ob_volume": 10732063,
+    "start_time": "2025-05-30T00:00:00",
+    "top": 89862,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 35311,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 589556,
+    "ob_low_volume": 93848,
+    "ob_volume": 683404,
+    "start_time": "2021-03-12T00:00:00",
+    "top": 42436,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 27188,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 562804,
+    "ob_low_volume": 500948,
+    "ob_volume": 1063752,
+    "start_time": "2020-10-30T00:00:00",
+    "top": 31346,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 10833,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 2534641,
+    "ob_low_volume": 248069,
+    "ob_volume": 2782710,
+    "start_time": "2019-10-11T00:00:00",
+    "top": 12183,
+    "type": "Bull"
+   }
+  ]
+ },
+ "raw_Wick": {
+  "bear": [
+   {
+    "bb_volume": 0,
+    "bottom": 265257,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 1725145,
+    "ob_low_volume": 4059957,
+    "ob_volume": 5785102,
+    "start_time": "2024-03-29T00:00:00",
+    "top": 293801,
+    "type": "Bear"
+   }
+  ],
+  "bull": [
+   {
+    "bb_volume": 0,
+    "bottom": 79823,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 19658128,
+    "ob_low_volume": 2099090,
+    "ob_volume": 21757218,
+    "start_time": "2025-05-30T00:00:00",
+    "top": 89862,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 79823,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 9534043,
+    "ob_low_volume": 1198020,
+    "ob_volume": 10732063,
+    "start_time": "2025-05-30T00:00:00",
+    "top": 89862,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 35311,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 589556,
+    "ob_low_volume": 93848,
+    "ob_volume": 683404,
+    "start_time": "2021-03-12T00:00:00",
+    "top": 42436,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 27188,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 562804,
+    "ob_low_volume": 500948,
+    "ob_volume": 1063752,
+    "start_time": "2020-10-30T00:00:00",
+    "top": 31346,
+    "type": "Bull"
+   },
+   {
+    "bb_volume": 0,
+    "bottom": 10833,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 2534641,
+    "ob_low_volume": 248069,
+    "ob_volume": 2782710,
+    "start_time": "2019-10-11T00:00:00",
+    "top": 12183,
+    "type": "Bull"
+   }
+  ]
+ }
+}

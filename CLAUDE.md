@@ -52,7 +52,11 @@ uv run pytest
   (레거시 모듈은 `per-file-ignores`).
 - 테스트는 **외부 API(pykrx·FinanceDataReader·yfinance)를 부르지 않는다** — 고정 입력을 쓴다.
   테스트는 `tests/conftest.py`가 `DB_PATH`를 임시 파일로 박은 뒤 앱을 import한다(레거시 앱은
-  import 순간 DB를 만든다).
+  import 순간 DB를 만든다). `conftest.py`가 모든 테스트에서 TCP·DNS를 막는다.
+- **현행 동작 스냅샷(OBS-3)** — `tests/snapshots/*.json`이 탐지·스크리닝·API 출력을 고정한다.
+  **동작을 일부러 바꾼 PR에서만** `UPDATE_SNAPSHOTS=1 uv run pytest`로 갱신하고 PR 본문에
+  이유를 적는다. 구조 정리처럼 동작이 안 바뀌어야 하는 PR에서 스냅샷이 바뀌면 버그다
+  (자세한 것은 `tests/README.md`).
 
 ## 프로젝트 구조 (리모델링 전 — 평평한 레거시 레이아웃)
 
@@ -68,7 +72,7 @@ data_provider.py      # 시세 조회(pykrx·FinanceDataReader)
 templates/            # Flask 템플릿(index.html · investor.html)
 index.html            # 루트의 옛 사본(templates/index.html과 내용이 다르다 — 리모델링 3에서 정리)
 daily_screening.sh    # 서버 cron 스크립트(서버 경로 하드코딩)
-tests/                # pytest (스모크 · 앞으로 회귀 테스트)
+tests/                # pytest — 스모크 + 현행 동작 고정 특성 테스트(OBS-3, tests/README.md)
 ```
 
 - 의존성은 `pyproject.toml` + `uv.lock`이 정본이다. `requirements.txt`는 서버 배포가 아직 쓰므로

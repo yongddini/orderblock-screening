@@ -61,6 +61,17 @@ python_version = "3.11"
 # 새 패키지를 만들면 여기에 추가한다. 레거시 모듈은 아래 override로 검사하지 않는다.
 strict = true
 files = ["tests"]
+# 테스트가 레거시(타입 없는) 함수를 부르는 것은 허용한다 — 특성 테스트의 본업이다(OBS-3).
+untyped_calls_exclude = [
+    "app_production",
+    "collect_data",
+    "data_provider",
+    "indicators",
+    "orderblock_info",
+    "realtime_detector",
+    "screening_core",
+    "stock_screener",
+]
 
 # 레거시 모듈 — tests가 import해도 오류를 보고하지 않는다(리모델링 3에서 줄여 나간다).
 [[tool.mypy.overrides]]

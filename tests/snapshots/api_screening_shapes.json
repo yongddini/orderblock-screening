@@ -1,0 +1,144 @@
+{
+ "by_date_compact_weekly": {
+  "shape": {
+   "results": [
+    {
+     "change_percent": "float",
+     "code": "str",
+     "created_at": "str",
+     "current_price": "float",
+     "distance_percent": "float",
+     "id": "int",
+     "is_recommended": "int",
+     "market": "str",
+     "name": "str",
+     "ob_bottom": "float",
+     "ob_top": "float",
+     "rsi": "float",
+     "scan_date": "str",
+     "timeframe": "str",
+     "trading_value": "float",
+     "zone_position": "str",
+     "zone_type": "str"
+    }
+   ],
+   "scan_date": "str",
+   "stats": {
+    "markets": {
+     "ETF": "int",
+     "KOSPI": "int"
+    },
+    "total": "int",
+    "zone_position": {
+     "근접": "int"
+    },
+    "zone_type": {
+     "저항": "int",
+     "지지": "int"
+    }
+   },
+   "success": "bool"
+  },
+  "status": 200
+ },
+ "by_date_daily": {
+  "shape": {
+   "results": [
+    {
+     "change_percent": "float",
+     "code": "str",
+     "created_at": "str",
+     "current_price": "float",
+     "distance_percent": "float",
+     "id": "int",
+     "is_recommended": "int",
+     "market": "str",
+     "name": "str",
+     "ob_bottom": "float",
+     "ob_top": "float",
+     "rsi": "float",
+     "scan_date": "str",
+     "timeframe": "str",
+     "trading_value": "float",
+     "zone_position": "str",
+     "zone_type": "str"
+    }
+   ],
+   "scan_date": "str",
+   "stats": {
+    "markets": {
+     "KOSDAQ": "int",
+     "KOSPI": "int"
+    },
+    "total": "int",
+    "zone_position": {
+     "근접": "int",
+     "내부": "int"
+    },
+    "zone_type": {
+     "지지": "int"
+    }
+   },
+   "success": "bool"
+  },
+  "status": 200
+ },
+ "by_date_missing": {
+  "shape": {
+   "message": "str",
+   "success": "bool"
+  },
+  "status": 200
+ },
+ "dates": {
+  "shape": {
+   "dates": [
+    {
+     "count": "int",
+     "date": "str"
+    }
+   ],
+   "success": "bool"
+  },
+  "status": 200
+ },
+ "recommended": {
+  "shape": {
+   "message": "str",
+   "success": "bool"
+  },
+  "status": 200
+ },
+ "stock": {
+  "shape": {
+   "stock": {
+    "change_percent": "float",
+    "code": "str",
+    "created_at": "str",
+    "current_price": "float",
+    "distance_percent": "float",
+    "id": "int",
+    "is_recommended": "int",
+    "market": "str",
+    "name": "str",
+    "ob_bottom": "float",
+    "ob_top": "float",
+    "rsi": "float",
+    "scan_date": "str",
+    "timeframe": "str",
+    "trading_value": "float",
+    "zone_position": "str",
+    "zone_type": "str"
+   },
+   "success": "bool"
+  },
+  "status": 200
+ },
+ "stock_missing": {
+  "shape": {
+   "message": "str",
+   "success": "bool"
+  },
+  "status": 200
+ }
+}

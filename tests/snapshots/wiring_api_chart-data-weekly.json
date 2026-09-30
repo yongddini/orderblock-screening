@@ -1,0 +1,9 @@
+[
+ {
+  "combine_obs": true,
+  "max_atr_mult": 2.0,
+  "max_order_blocks": 30,
+  "ob_end_method": "Wick",
+  "swing_length": 10
+ }
+]

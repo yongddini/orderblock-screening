@@ -1,0 +1,37 @@
+{
+ "count": 2,
+ "data": [
+  {
+   "buy_amount": 70000000,
+   "buy_volume": 1000,
+   "change_percent": 0.71,
+   "code": "005930",
+   "current_price": 70500.0,
+   "market": "KOSPI",
+   "name": "삼성전자",
+   "net_amount": -350000000,
+   "net_volume": -5000,
+   "rank": 1,
+   "sell_amount": 420000000,
+   "sell_volume": 6000
+  },
+  {
+   "buy_amount": 100000,
+   "buy_volume": 10,
+   "change_percent": 0.0,
+   "code": "888880",
+   "current_price": 0.0,
+   "market": "KOSDAQ",
+   "name": "상장폐지예정",
+   "net_amount": -400000,
+   "net_volume": -40,
+   "rank": 2,
+   "sell_amount": 500000,
+   "sell_volume": 50
+  }
+ ],
+ "date": "20260914",
+ "investor_type": "institution",
+ "success": true,
+ "trade_type": "sell"
+}
