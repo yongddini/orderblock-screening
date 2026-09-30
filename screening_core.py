@@ -7,6 +7,7 @@
 import sqlite3
 from datetime import datetime, timedelta
 import pandas as pd
+from data_provider import KoreanStockDataProvider
 from stock_screener import StockScreener
 from zoneinfo import ZoneInfo
 import os
@@ -39,6 +40,9 @@ def run_and_save_screening(target_date=None):
             return
     except ImportError:
         pass
+
+    # 시가총액 순위를 만들 수 없으면 기존 결과를 지우기 전에 멈춘다(OBS-7 §5).
+    KoreanStockDataProvider.validate_market_caps(["KOSPI", "KOSDAQ"])
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
