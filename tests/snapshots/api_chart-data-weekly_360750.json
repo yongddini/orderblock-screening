@@ -1,0 +1,101 @@
+{
+ "candles": {
+  "count": 320,
+  "first": {
+   "close": 9335.0,
+   "high": 9368.0,
+   "low": 9296.0,
+   "open": 9354.0,
+   "time": 1596758400
+  },
+  "last": {
+   "close": 25445.0,
+   "high": 25470.0,
+   "low": 25335.0,
+   "open": 25370.0,
+   "time": 1789689600
+  }
+ },
+ "orderblocks": {
+  "bear": [],
+  "bull": [
+   {
+    "bottom": 23602.0,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "start_time": 1775174400,
+    "top": 24587.0
+   },
+   {
+    "bottom": 17180.0,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "start_time": 1723161600,
+    "top": 17861.0
+   },
+   {
+    "bottom": 13484.0,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "start_time": 1698969600,
+    "top": 13922.0
+   }
+  ]
+ },
+ "rsi": {
+  "count": 319,
+  "last": {
+   "time": 1789689600,
+   "value": 41.64406105978825
+  }
+ },
+ "rsi_ema": {
+  "count": 319,
+  "last": {
+   "time": 1789689600,
+   "value": 53.132509605227234
+  }
+ },
+ "shape": {
+  "data": {
+   "candles": [
+    {
+     "close": "float",
+     "high": "float",
+     "low": "float",
+     "open": "float",
+     "time": "int"
+    }
+   ],
+   "orderblocks": {
+    "bear": [],
+    "bull": [
+     {
+      "bottom": "float",
+      "break_time": "null",
+      "breaker": "bool",
+      "combined": "bool",
+      "start_time": "int",
+      "top": "float"
+     }
+    ]
+   },
+   "rsi": [
+    {
+     "time": "int",
+     "value": "float"
+    }
+   ],
+   "rsi_ema": [
+    {
+     "time": "int",
+     "value": "float"
+    }
+   ]
+  },
+  "success": "bool"
+ }
+}

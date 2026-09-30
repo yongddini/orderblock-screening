@@ -1,0 +1,92 @@
+"""수급(외국인·기관) 저장 로직 왕복 테스트(OBS-3 §4).
+
+`screening_core.run_and_save_investor_data`에 pykrx 모양의 고정 입력을 먹여 임시 SQLite에
+저장하고, 테이블과 API(`/api/investor-trading`·`/api/investor-dates`)로 다시 읽는다.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import app_production
+import screening_core
+from tests.conftest import query_rows
+from tests.support import SCREEN_DATE_COMPACT, FakePykrxStock, assert_matches_snapshot
+
+_COLUMNS = (
+    "scan_date, investor_type, trade_type, rank, code, name, market, current_price, "
+    "change_percent, buy_amount, sell_amount, net_amount, buy_volume, sell_volume, net_volume"
+)
+
+
+def _rows(db: Path) -> list[dict[str, object]]:
+    return query_rows(
+        db,
+        f"SELECT {_COLUMNS} FROM investor_trading ORDER BY investor_type, trade_type, rank",
+    )
+
+
+def test_investor_roundtrip(fake_pykrx: FakePykrxStock, fresh_db: Path) -> None:
+    screening_core.run_and_save_investor_data(SCREEN_DATE_COMPACT)
+    rows = _rows(fresh_db)
+    assert_matches_snapshot("investor_trading_rows", rows)
+
+    by_key = {(r["investor_type"], r["trade_type"], r["rank"]): r for r in rows}
+    # 순매수 상위 = 순매수거래대금 내림차순, 순매도 상위 = 오름차순(두 시장 합쳐서).
+    # 순위는 저장에 실패한 행(아래 777770)의 자리까지 센다 — 4위가 비어 있다.
+    assert [
+        (r["rank"], r["code"])
+        for r in rows
+        if r["investor_type"] == "foreign" and r["trade_type"] == "buy"
+    ] == [(1, "005930"), (2, "035420"), (3, "228670"), (5, "247540"), (6, "000660")]
+    assert by_key[("foreign", "sell", 1)]["code"] == "000660"
+    # 시세가 없는 종목은 현재가·등락률 0으로 저장된다.
+    inst = {r["code"]: r for r in rows if r["investor_type"] == "institution"}
+    assert inst["888880"]["current_price"] == 0
+    assert inst["888880"]["change_percent"] == 0
+    assert inst["086520"]["current_price"] == 100500
+    # 종목명이 빈 행(777770)은 현행 코드에서 **저장되지 않는다** — pandas가 빈 칸을 NaN으로
+    # 읽고, NaN은 참으로 평가돼 이름 조회 폴백을 건너뛴 뒤 NOT NULL 제약에 걸린다.
+    # 버그 후보지만 이 이슈는 현행 동작을 고정한다(수정은 별도 이슈).
+    assert "777770" not in {r["code"] for r in rows}
+
+    # 같은 날짜로 다시 저장하면 그 날짜 행을 지우고 다시 쓴다(중복 없음).
+    screening_core.run_and_save_investor_data(SCREEN_DATE_COMPACT)
+    assert _rows(fresh_db) == rows
+
+
+def test_investor_api_reads_back(fake_pykrx: FakePykrxStock, fresh_db: Path) -> None:
+    client = app_production.app.test_client()
+    # ⚠️ 현행 동작: `investor_trading` 테이블은 `init_db()`가 아니라 첫 수집 때 만들어진다.
+    # 수집 전에 부르면 404가 아니라 500(no such table)이 난다(버그 후보 — 기록만).
+    empty = client.get("/api/investor-trading")
+    assert empty.status_code == 500
+    assert empty.get_json()["success"] is False
+    assert "no such table" in empty.get_json()["error"]
+
+    screening_core.run_and_save_investor_data(SCREEN_DATE_COMPACT)
+
+    dates = client.get("/api/investor-dates").get_json()
+    assert dates == {"success": True, "dates": [SCREEN_DATE_COMPACT]}
+
+    res = client.get("/api/investor-trading?investor_type=institution&trade_type=sell&limit=2")
+    body = res.get_json()
+    assert res.status_code == 200
+    assert body["date"] == SCREEN_DATE_COMPACT
+    assert body["count"] == 2
+    assert [d["rank"] for d in body["data"]] == [1, 2]
+    assert set(body["data"][0]) == {
+        "rank",
+        "code",
+        "name",
+        "market",
+        "current_price",
+        "change_percent",
+        "buy_amount",
+        "sell_amount",
+        "net_amount",
+        "buy_volume",
+        "sell_volume",
+        "net_volume",
+    }
+    assert_matches_snapshot("api_investor_trading_institution_sell", body)

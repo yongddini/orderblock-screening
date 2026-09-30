@@ -1,0 +1,77 @@
+{
+ "bars": 498,
+ "first": "2024-08-26T00:00:00",
+ "last": "2026-09-14T00:00:00",
+ "latest_combine_False": {
+  "bear": [],
+  "bull": [
+   {
+    "bb_volume": 0,
+    "bottom": 3680,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 1059250,
+    "ob_low_volume": 84909,
+    "ob_volume": 1144159,
+    "start_time": "2026-07-30T00:00:00",
+    "top": 4560,
+    "type": "Bull"
+   }
+  ]
+ },
+ "latest_combine_True": {
+  "bear": [],
+  "bull": [
+   {
+    "bb_volume": 0,
+    "bottom": 3680,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 1059250,
+    "ob_low_volume": 84909,
+    "ob_volume": 1144159,
+    "start_time": "2026-07-30T00:00:00",
+    "top": 4560,
+    "type": "Bull"
+   }
+  ]
+ },
+ "raw_Close": {
+  "bear": [],
+  "bull": [
+   {
+    "bb_volume": 0,
+    "bottom": 3680,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 1059250,
+    "ob_low_volume": 84909,
+    "ob_volume": 1144159,
+    "start_time": "2026-07-30T00:00:00",
+    "top": 4560,
+    "type": "Bull"
+   }
+  ]
+ },
+ "raw_Wick": {
+  "bear": [],
+  "bull": [
+   {
+    "bb_volume": 0,
+    "bottom": 3680,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 1059250,
+    "ob_low_volume": 84909,
+    "ob_volume": 1144159,
+    "start_time": "2026-07-30T00:00:00",
+    "top": 4560,
+    "type": "Bull"
+   }
+  ]
+ }
+}

@@ -1,0 +1,77 @@
+{
+ "daily_etf": [],
+ "daily_stocks": [
+  {
+   "Change_Percent": -0.8629989212513484,
+   "Code": "228670",
+   "Current_Price": 4595,
+   "Distance_Percent": 0.7616974972796519,
+   "Market": "KOSDAQ",
+   "Name": "레이",
+   "OB_Bottom": 3680,
+   "OB_Top": 4560,
+   "OB_Type": "Bull",
+   "RSI": 44.22104703190342,
+   "Status": "근접-지지",
+   "trading_value": 106332895
+  },
+  {
+   "Change_Percent": -7.119205298013245,
+   "Code": "000660",
+   "Current_Price": 1683000,
+   "Distance_Percent": 0.0,
+   "Market": "KOSPI",
+   "Name": "SK하이닉스",
+   "OB_Bottom": 1557000,
+   "OB_Top": 1687000,
+   "OB_Type": "Bull",
+   "RSI": 47.899227572194604,
+   "Status": "내부-지지",
+   "trading_value": 6734606967000
+  }
+ ],
+ "weekly": [
+  {
+   "Change_Percent": 0.019654088050314468,
+   "Code": "360750",
+   "Current_Price": 25445,
+   "Distance_Percent": 3.371978777755944,
+   "Market": "ETF",
+   "Name": "TIGER 미국S&P500",
+   "OB_Bottom": 23602,
+   "OB_Top": 24587,
+   "OB_Type": "Bull",
+   "RSI": 41.64406105978825,
+   "Status": "근접-지지",
+   "trading_value": 683190260270
+  },
+  {
+   "Change_Percent": 2.4179620034542317,
+   "Code": "003490",
+   "Current_Price": 29650.0,
+   "Distance_Percent": 4.3844856661045535,
+   "Market": "KOSPI",
+   "Name": "대한항공",
+   "OB_Bottom": 30950.0,
+   "OB_Top": 32550.0,
+   "OB_Type": "Bear",
+   "RSI": 60.053832402619605,
+   "Status": "근접-저항",
+   "trading_value": 61622781000.0
+  },
+  {
+   "Change_Percent": -1.694915254237288,
+   "Code": "035420",
+   "Current_Price": 203000.0,
+   "Distance_Percent": 3.842364532019704,
+   "Market": "KOSPI",
+   "Name": "NAVER",
+   "OB_Bottom": 176200.0,
+   "OB_Top": 195200.0,
+   "OB_Type": "Bull",
+   "RSI": 43.88425088283877,
+   "Status": "근접-지지",
+   "trading_value": 78060808000.0
+  }
+ ]
+}
