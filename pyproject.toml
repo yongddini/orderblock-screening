@@ -7,15 +7,14 @@ readme = "README.md"
 requires-python = ">=3.11,<3.13"
 # 버전은 기존 requirements.txt 값을 옮겼다(서버 실제 버전 미확인 → 이슈 지침대로
 # requirements.txt 유지). 버전이 적혀 있지 않던 셋은 uv.lock이 고정한다.
-# 예외 하나: requirements.txt의 `pandas==2.1.4`는 `pykrx==1.2.4`(pandas>=2.2,<3 요구)와
-# 함께 설치될 수 없는 조합이라, pykrx 핀을 살리고 pandas를 그 범위로 푼다(정확한 버전은
-# uv.lock). 서버의 실제 pandas 버전은 리모델링 5(배포)에서 확인한다.
+# OBS-4: pandas는 pykrx가 요구하는 범위(>=2.2,<3)로 풀고, pykrx는 서버 venv310에 실제로
+# 깔린 1.2.7로 맞췄다(2026-09-30 서버 실측 — pandas 2.3.3 · pykrx 1.2.7). requirements.txt도 같다.
 dependencies = [
     "flask==3.0.0",
     "gunicorn==21.2.0",
     "pandas>=2.2,<3.0",
     "yfinance==0.2.33",
-    "pykrx==1.2.4",
+    "pykrx==1.2.7",
     "requests==2.32.5",
     "finance-datareader",
     "tqdm",

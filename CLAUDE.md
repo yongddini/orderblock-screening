@@ -2,7 +2,7 @@
 
 오더블록(Order Block) 기반 **국내주식 스크리닝 웹서비스**. 매일 장 마감 뒤 코스피·코스닥·ETF를
 스크리닝해 오더블록 근처 종목을 SQLite에 저장하고, Flask 웹 화면으로 보여 준다.
-서버는 `/home/rocky/orderblock`(gunicorn `app_production:app` + 매일 20:30 KST cron
+서버는 `/home/rocky/orderblock`(gunicorn `app_production:app`는 `venv310` 가상환경 · 매일 20:05 KST cron
 `daily_screening.sh`).
 
 **이 저장소에서 Claude Code의 역할은 「개발자」다.** 완료 판단·상태 관리·다음 작업 제안은

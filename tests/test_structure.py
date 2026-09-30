@@ -190,3 +190,36 @@ def test_python_m_obscreen_help_runs() -> None:
     )
     assert res.returncode == 0, res.stderr
     assert "obscreen collect" in res.stdout
+
+
+def _run_daily_script(tmp_path: Path, env_extra: dict[str, str]) -> str:
+    """`daily_screening.sh` 사본을 가짜 파이썬으로 돌려 어떤 파이썬이 무슨 인자로 불렸나 본다."""
+    import os
+    import shutil
+
+    shutil.copy(REPO_ROOT / "daily_screening.sh", tmp_path / "daily_screening.sh")
+    record = tmp_path / "called.txt"
+    stub = f'#!/bin/bash\necho "$0 $*" >> "{record}"\n'
+    venv_py = tmp_path / "venv310" / "bin" / "python3"
+    venv_py.parent.mkdir(parents=True)
+    venv_py.write_text(stub)
+    venv_py.chmod(0o755)
+    other = tmp_path / "other-python"
+    other.write_text(stub)
+    other.chmod(0o755)
+    env = {k: v for k, v in os.environ.items() if k != "OBSCREEN_PYTHON"}
+    env.update({k: v.replace("{other}", str(other)) for k, v in env_extra.items()})
+    subprocess.run(["bash", str(tmp_path / "daily_screening.sh")], env=env, check=True)
+    assert (tmp_path / "logs" / "screening.log").exists()
+    return record.read_text()
+
+
+def test_daily_script_uses_repo_venv310_by_default(tmp_path: Path) -> None:
+    """서버 cron은 gunicorn과 같은 venv310으로 돌아야 한다 — 시스템 python3(3.9)엔 pandas가 없다."""
+    called = _run_daily_script(tmp_path, {})
+    assert called.strip() == f"{tmp_path}/venv310/bin/python3 -m obscreen collect"
+
+
+def test_daily_script_obscreen_python_overrides(tmp_path: Path) -> None:
+    called = _run_daily_script(tmp_path, {"OBSCREEN_PYTHON": "{other}"})
+    assert called.strip() == f"{tmp_path}/other-python -m obscreen collect"
