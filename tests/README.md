@@ -24,6 +24,7 @@ uv run pytest            # 전부(네트워크 호출 0 — conftest가 TCP·DNS
 | `test_characterization_investor.py` | 수급(외국인·기관) 저장 → 임시 SQLite → 표·API 왕복 |
 | `test_characterization_api.py` | `/api/screening/*`·`/api/chart-data(-weekly)/*`·`/api/stock/*`·`/health` 응답 모양(키·타입) + 차트 오더블록 값 |
 | `test_characterization_wiring.py` | 운영 경로가 **넘기는 설정값** — `run_and_save_screening`의 `StockScreener` 3개(근접도 3/1/5%·ATR 배수 2.0 등)와 차트 API의 `RealtimeOrderBlockDetector` 인자를 생성자 스파이로 기록(기본값 포함). 필터를 **푸는** 변화는 출력 스냅샷으로 안 잡히기 때문(OBS-4가 이 숫자들을 설정으로 옮긴다) + 근접도를 값으로 거는 합성 존(현재가 3.2% 아래) |
+| `test_chart_frontend.py` | 차트 화면(OBS-10) — ECharts 제거·벤더링 라이브러리 서빙, `static/js/ob_chart.js` 존 박스 규칙을 node로, 실제 `/api/chart-data*` 응답의 존 ↔ 박스 가격대·시작 봉 정합(node 없으면 건너뜀) |
 | `support.py` | 가짜 FinanceDataReader·pykrx, 스냅샷 비교기 |
 
 ## 고정 입력(`tests/fixtures/`)

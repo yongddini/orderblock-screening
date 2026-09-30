@@ -70,6 +70,7 @@ orderblock_info.py    # 오더블록 자료구조
 indicators.py         # ATR·스윙 등 지표
 data_provider.py      # 시세 조회(pykrx·FinanceDataReader)
 templates/            # Flask 템플릿(index.html · investor.html)
+static/               # 차트 JS(js/ob_chart.js) + 벤더링 라이브러리(vendor/ — Lightweight Charts v5.2.0, OBS-10)
 index.html            # 루트의 옛 사본(templates/index.html과 내용이 다르다 — 리모델링 3에서 정리)
 daily_screening.sh    # 서버 cron 스크립트(서버 경로 하드코딩)
 tests/                # pytest — 스모크 + 현행 동작 고정 특성 테스트(OBS-3, tests/README.md)
@@ -78,6 +79,12 @@ tests/                # pytest — 스모크 + 현행 동작 고정 특성 테�
 - 의존성은 `pyproject.toml` + `uv.lock`이 정본이다. `requirements.txt`는 서버 배포가 아직 쓰므로
   리모델링 5(배포)까지 남겨 둔다.
 - 설정은 환경변수(`.env.example` 참고). API 키·시크릿은 코드에 하드코딩하지 않는다.
+
+- **차트는 Lightweight Charts 한 가지다(OBS-10)** — AlphaBlock과 같은 v5.2.0을 `static/vendor/`에
+  벤더링하고 `static/js/ob_chart.js`가 캔들 + 존 박스(캔버스 프리미티브 **하나**) + RSI 보조창을
+  그린다. 존마다 시리즈를 만들지 말 것(AlphaBlock에서 2,000개에 브라우저가 멈췄다). 순수 함수는
+  `tests/test_chart_frontend.py`가 node로 검사한다. plotly `create_chart_html*`·실험 라우트는
+  OBS-4가 정리한다.
 
 ## 리모델링 방향 (사용자 결정 2026-09-30)
 
