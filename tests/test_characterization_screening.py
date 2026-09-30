@@ -113,7 +113,12 @@ def test_check_proximity_missing_data_returns_none(fake_fdr: FakeFdr) -> None:
 
 
 def test_universe_selection(fake_fdr: FakeFdr) -> None:
-    """시가총액 상위 N · 거래량 상위 ETF(레버리지·인버스·거래 0 제외)."""
+    """시가총액 상위 N · 거래량 상위 ETF(레버리지·인버스·거래 0 제외).
+
+    OBS-7: 고정 목록의 `Marcap`은 실측처럼 전부 비어 있고 이름순이다 — 시총은
+    `Close × Stocks`로 계산되고, 코스닥은 `KOSDAQ GLOBAL`을 포함한다(자세한 것은
+    `test_market_cap_selection.py`).
+    """
     kospi = KoreanStockDataProvider.get_top_stocks_by_market_cap("KOSPI", 3)
     assert kospi["Code"].tolist() == ["005930", "000660", "035420"]
     kosdaq = KoreanStockDataProvider.get_top_stocks_by_market_cap("KOSDAQ", 400)
@@ -223,8 +228,13 @@ def _record(
     }
 
 
-def test_recommendation_flags(monkeypatch: pytest.MonkeyPatch, fresh_db: Path) -> None:
-    """추천 규칙: bit1 = RSI<30 · 지지 · 존 폭<10% / bit2 = 일봉·주봉 모두 지지(일봉 행에만)."""
+def test_recommendation_flags(
+    monkeypatch: pytest.MonkeyPatch, fresh_db: Path, fake_fdr: FakeFdr
+) -> None:
+    """추천 규칙: bit1 = RSI<30 · 지지 · 존 폭<10% / bit2 = 일봉·주봉 모두 지지(일봉 행에만).
+
+    `fake_fdr`는 OBS-7의 사전 시총 검사(`validate_market_caps`)가 종목 목록을 읽기 때문에 건다.
+    """
     daily = [
         _record("A00001", "Bull", "내부-지지", 25.0, 105.0, 100.0),  # bit1
         _record("A00002", "Bull", "근접-지지", 25.0, 115.0, 100.0),  # 폭 15% → 아님

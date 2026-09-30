@@ -23,6 +23,7 @@ uv run pytest            # 전부(네트워크 호출 0 — conftest가 TCP·DNS
 | `test_characterization_screening.py` | 근접도 분류(`classify_position`) 경계, 종목별 `check_proximity(_weekly)`, 종목 선정(시총 상위·ETF 제외 규칙), 시장 스크리닝, `run_and_save_screening` DB 행 · 추천 플래그(bit1·bit2) · 주말/공휴일 |
 | `test_characterization_investor.py` | 수급(외국인·기관) 저장 → 임시 SQLite → 표·API 왕복 |
 | `test_characterization_api.py` | `/api/screening/*`·`/api/chart-data(-weekly)/*`·`/api/stock/*`·`/health` 응답 모양(키·타입) + 차트 오더블록 값 |
+| `test_market_cap_selection.py` | 시총 상위 N 선정(OBS-7) — `Marcap` 전부 NaN 입력에서 `Close × Stocks` 순위 · `KOSDAQ GLOBAL` 포함/KONEX 제외 · `Marcap`이 오면 그 값 우선 · 시총 미상 비율 방어(5%)와 기존 결과 보존 · `collect_data --all`의 수급 계속 + 종료 코드 1 |
 | `test_characterization_wiring.py` | 운영 경로가 **넘기는 설정값** — `run_and_save_screening`의 `StockScreener` 3개(근접도 3/1/5%·ATR 배수 2.0 등)와 차트 API의 `RealtimeOrderBlockDetector` 인자를 생성자 스파이로 기록(기본값 포함). 필터를 **푸는** 변화는 출력 스냅샷으로 안 잡히기 때문(OBS-4가 이 숫자들을 설정으로 옮긴다) + 근접도를 값으로 거는 합성 존(현재가 3.2% 아래) |
 | `test_chart_frontend.py` | 차트 화면(OBS-10) — ECharts 제거·벤더링 라이브러리 서빙, `static/js/ob_chart.js` 존 박스 규칙을 node로, 실제 `/api/chart-data*` 응답의 존 ↔ 박스 가격대·시작 봉 정합(node 없으면 건너뜀) |
 | `support.py` | 가짜 FinanceDataReader·pykrx, 스냅샷 비교기 |
@@ -34,9 +35,12 @@ uv run pytest            # 전부(네트워크 호출 0 — conftest가 TCP·DNS
   코스닥 대형(247540·086520·196170·041510)·소형(228670), ETF(069500·229200·360750).
   주봉은 저장하지 않고 운영 코드(`convert_to_weekly`)로 만든다 — 그 변환 결과 자체를
   `weekly_bars_*.json` 스냅샷으로 고정한다.
-- `listing_krx.csv`·`listing_etf.csv` — 종목 목록. **시가총액은 손으로 넣은 값**이다
-  (2026-09-30 실측 `fdr.StockListing("KRX")`의 `Marcap`이 전부 비어 있었다 — 아래 참고).
-  시세 없는 종목(999990)·레버리지/인버스 ETF·거래 0 ETF는 경로를 태우려고 넣었다.
+- `listing_krx.csv`·`listing_etf.csv` — 종목 목록. **KRX 목록은 실측 모양을 따른다**(OBS-7):
+  2026-09-30 `fdr.StockListing("KRX")`처럼 `Marcap`을 **전부 비우고** `Close`·`Stocks`만 채웠고,
+  `KOSDAQ GLOBAL`(에코프로비엠·알테오젠)·`KONEX`(999980) 행을 넣었으며, 행 순서는 **이름순**
+  (시총순이 아님)이다 — 그래서 시총 정렬이 깨지면 선정 테스트가 실제로 깨진다. `Close`·`Stocks`
+  값은 손으로 넣은 근삿값이다. 시세 없는 종목(999990)·레버리지/인버스 ETF·거래 0 ETF는 경로를
+  태우려고 넣었다.
 - `investor/*.csv` — pykrx 모양을 손으로 만든 수급 표(작고 결정적). 빈 종목명·시세 없는
   종목을 일부러 넣었다.
 - 스크리닝 기준일은 **2026-09-14**(월).
@@ -63,9 +67,9 @@ git diff --stat tests/snapshots/     # 무엇이 바뀌었나
    첫 수집이 만든다. 빈 DB에서는 `no such table`로 500(404가 아님).
 3. **종목명이 빈 수급 행이 조용히 빠지고 순위에 구멍이 난다** — 빈 칸이 NaN으로 읽히고 NaN이
    참이라 이름 조회 폴백을 건너뛴 뒤 NOT NULL에 걸린다. 순위는 그 행 자리까지 센다.
-4. **실측 종목 목록의 시가총액이 비어 있다** — 2026-09-30 `fdr.StockListing("KRX")`의
-   `Marcap`이 2,873행 전부 NaN이었다. 그러면 「시총 상위 400」이 정렬이 안 된 목록 앞 400개가
-   된다. 운영 서버에서도 그런지는 확인 필요(테스트는 손으로 넣은 시총을 쓴다).
+4. ~~**실측 종목 목록의 시가총액이 비어 있다**~~ — **OBS-7이 고쳤다.** `Marcap`이 비면
+   `Close × Stocks`로 계산하고, 코스닥은 `KOSDAQ GLOBAL`을 포함하며, 시총을 모르는 종목이
+   5%를 넘으면 스크리닝을 멈춘다(`test_market_cap_selection.py`).
 5. `app_production.py`가 `screening_core.run_and_save_screening`을 import한 뒤 **같은 이름의
    자기 함수로 덮어쓴다**(두 벌). cron(`collect_data.py`)은 `screening_core` 판을 쓴다 —
    이 테스트도 그쪽을 고정한다.
