@@ -262,6 +262,7 @@ def curve_rows(
                 "mdd_mean": float(sub[f"mdd_{entry}_{h}"].mean()) if n else math.nan,
                 "mdd_worst": float(sub[f"mdd_{entry}_{h}"].min()) if n else math.nan,
                 "ex_g0": float(ex_g0.mean()) if n else math.nan,
+                "ex_g0_se": float(ex_g0.std() / math.sqrt(n)) if n > 1 else math.nan,
                 "ex_g0_win": float((ex_g0 > 0).mean()) if n else math.nan,
                 "ex_idx": float(ex_idx.mean()) if n else math.nan,
                 "ex_g0_front": float(ex_g0[front].mean()) if front.any() else math.nan,
@@ -288,6 +289,8 @@ def _fmt(x: float, kind: str = "pct") -> str:
         return "—"
     if kind == "pct":
         return f"{x * 100:+.2f}%"
+    if kind == "abs":
+        return f"{x * 100:.2f}%"
     if kind == "rate":
         return f"{x * 100:.1f}%"
     return f"{x}"
@@ -296,7 +299,7 @@ def _fmt(x: float, kind: str = "pct") -> str:
 def render_curve(rows: list[dict[str, Any]], with_index: bool = True) -> str:
     head = (
         "| 보유(영업일) | 신호 수 | 평균 | 중앙값 | 이긴 비율 | 최악 "
-        "| 보유 중 최대 하락(평균/최악) | G0 대비 초과 | 초과 이긴 비율 |"
+        "| 보유 중 최대 하락(평균/최악) | G0 대비 초과(±표준오차) | 초과 이긴 비율 |"
         + (" 지수 대비 초과 |" if with_index else "")
         + " 앞 반 / 뒤 반 (G0 대비) | 비고 |"
     )
@@ -311,7 +314,8 @@ def render_curve(rows: list[dict[str, Any]], with_index: bool = True) -> str:
         line = (
             f"| {r['h']} | {r['n']} | {_fmt(r['mean'])} | {_fmt(r['median'])} | "
             f"{_fmt(r['win'], 'rate')} | {_fmt(r['worst'])} | "
-            f"{_fmt(r['mdd_mean'])} / {_fmt(r['mdd_worst'])} | {_fmt(r['ex_g0'])} | "
+            f"{_fmt(r['mdd_mean'])} / {_fmt(r['mdd_worst'])} | {_fmt(r['ex_g0'])}"
+            f" (±{_fmt(r['ex_g0_se'], 'abs')}) | "
             f"{_fmt(r['ex_g0_win'], 'rate')} |"
             + (f" {_fmt(r['ex_idx'])} |" if with_index else "")
             + f" {halves} | {warn} |"
@@ -656,7 +660,10 @@ def render_report(panel: Panel, meta: RunMeta) -> str:
     out.append(
         "초과수익 = 신호 수익(비용 차감) − 같은 날·같은 매수 방식 G0 평균(비용 차감). "
         "지수 대비 = 신호 수익(비용 차감) − 같은 날 소속 시장 지수(코스피 KS11 · 코스닥 KQ11, "
-        "비용 없음). 보유 중 최대 하락 = 매수 뒤 그 기간 최저가 기준."
+        "비용 없음). 보유 중 최대 하락 = 매수 뒤 그 기간 최저가 기준. "
+        "±표준오차는 신호를 서로 독립으로 본 값이다 — 같은 날에 여러 종목이 함께 뜨는 일이 "
+        "잦아(1절 월별 분포) 실제 불확실성은 이보다 크다. 평균이 표준오차 2배 안이면 0과 "
+        "구분되지 않는다."
     )
     out.append("")
     first_df = sig[main_first]
@@ -775,6 +782,10 @@ def verdict_lines(rows: list[dict[str, Any]]) -> list[str]:
             continue
         same = _same_direction(r["ex_g0_front"], r["ex_g0_back"])
         sign = "G0보다 높다" if r["ex_g0"] > 0 else "G0보다 낮다"
+        if abs(r["ex_g0"]) < 2 * r["ex_g0_se"]:
+            sign += (
+                f" — 단 표준오차(±{_fmt(r['ex_g0_se'], 'abs')})의 2배 안이라 0과 구분되지 않는다"
+            )
         if same.startswith("같음"):
             lines.append(
                 f"- {r['h']}일: 신호 {r['n']}건 · 초과 {_fmt(r['ex_g0'])} — {sign}(앞·뒤 반 {same})"
