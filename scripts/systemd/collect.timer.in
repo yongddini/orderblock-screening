@@ -1,0 +1,13 @@
+# Obscreen 매일 수집 타이머 — OBS-6. 옛 crontab(매일 20:05)을 대신한다.
+# ⚠️ crontab 의 daily_screening.sh 줄을 지운 뒤 켠다(이중 실행 방지 — 런북 참고).
+[Unit]
+Description=Obscreen daily screening (20:05 KST)
+
+[Timer]
+OnCalendar=*-*-* 20:05:00 Asia/Seoul
+# 서버가 꺼져 있던 날을 부팅 때 몰아서 돌리지 않는다 — 날짜 인자 없는 수집은 「오늘」을 돈다.
+Persistent=false
+Unit=@COLLECT_UNIT@.service
+
+[Install]
+WantedBy=timers.target

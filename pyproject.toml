@@ -3,7 +3,7 @@ name = "orderblock-screening"
 version = "0.1.0"
 description = "오더블록 기반 국내주식 스크리닝 웹서비스 (Obscreen)"
 readme = "README.md"
-# 서버에서 도는 파이썬 버전은 아직 확인 전이다(리모델링 5 배포 이슈에서 맞춘다).
+# OBS-6: 서버 venv310 은 3.10 이지만 배포는 uv 가 받은 3.11 로 `.venv` 를 만든다(런북 §2).
 requires-python = ">=3.11,<3.13"
 # 버전은 기존 requirements.txt 값을 옮겼다(서버 실제 버전 미확인 → 이슈 지침대로
 # requirements.txt 유지). 버전이 적혀 있지 않던 셋은 uv.lock이 고정한다.
@@ -38,6 +38,7 @@ dev = [
     "mypy>=1.11",
     "pytest>=8",
     "pre-commit>=3.7",
+    "shellcheck-py>=0.11.0.1",
 ]
 
 [tool.uv]

@@ -122,7 +122,9 @@ def test_no_hardcoded_server_path_in_code_or_scripts() -> None:
     hits = [
         path
         for path in tracked
-        if path.endswith((".py", ".sh", ".toml", ".html", ".js", ".cfg", ".ini", ".service"))
+        if path.endswith(
+            (".py", ".sh", ".toml", ".html", ".js", ".cfg", ".ini", ".service", ".in", ".timer")
+        )
         and path != "tests/test_structure.py"
         and "/home/rocky" in (REPO_ROOT / path).read_text(encoding="utf-8", errors="ignore")
     ]
