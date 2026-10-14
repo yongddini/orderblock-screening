@@ -50,9 +50,7 @@ def _config() -> ScreenerConfig:
     return ScreenerConfig.from_settings(get_settings())
 
 
-def _replay_all(
-    histories: dict[str, pd.DataFrame], dates: list[pd.Timestamp]
-) -> pd.DataFrame:
+def _replay_all(histories: dict[str, pd.DataFrame], dates: list[pd.Timestamp]) -> pd.DataFrame:
     listing = _listing().set_index("Code")
     rows = []
     for code, hist in histories.items():
@@ -259,9 +257,7 @@ def test_report_and_csv_end_to_end(tmp_path: Path) -> None:
     config = _config()
     signals, member = holding.run_replay(histories, listing, calendar, 400, config, jobs=1)
     markets = dict(zip(listing["Code"], listing["MarketGroup"], strict=True))
-    panel = holding.build_panel(
-        signals, member, histories, indexes, markets, calendar, cost=0.0023
-    )
+    panel = holding.build_panel(signals, member, histories, indexes, markets, calendar, cost=0.0023)
     meta = holding.RunMeta(
         commit="abc1234",
         start=calendar[0],
@@ -288,3 +284,19 @@ def test_report_and_csv_end_to_end(tmp_path: Path) -> None:
     main = holding.MAIN.predicate(panel.signals)
     assert (panel.signals.loc[main, "is_recommended"] == 3).all()
     assert ((panel.signals["is_recommended"] == 3) == main).all()
+
+
+def test_halted_day_is_not_a_buy_and_does_not_fake_a_crash() -> None:
+    """거래정지일(시가·고가·저가 0) — 시가 매수 불가 · 저가 0을 −100% 하락으로 안 본다."""
+    hist = _toy_hist()
+    halted = hist.index[3]
+    hist.loc[halted, ["Open", "High", "Low"]] = 0.0
+    hist.loc[halted, "Volume"] = 0
+    hist.loc[halted, "Close"] = hist.loc[hist.index[2], "Close"]
+    ft = holding.forward_table(hist, horizons=(1, 3), cost=0.0)
+    t = hist.index[2]
+    assert math.isnan(ft.loc[t, "ret_open_1"])  # 다음 날(정지일) 시가에는 못 산다
+    assert ft.loc[t, "mdd_close_3"] > -0.05  # 저가 0이 −100%로 잡히지 않는다
+    assert all(math.isfinite(v) for v in ft["ret_open_3"].dropna())
+    sr = holding.stop_returns(hist, t, stop_price=50.0, entry="open", horizons=(3,))
+    assert math.isnan(sr[3])

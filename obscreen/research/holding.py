@@ -123,10 +123,14 @@ def forward_table(
 
     **신호일 이후의 봉만 쓴다**(매수가로 쓰는 신호일 종가는 그날 확정된 값). i+h가 이력 밖이면
     NaN — 보유 기간이 끝나지 않은 신호는 그 칸에서 빠진다.
+
+    거래정지일(시가·고가·저가 0 · 종가는 직전 값)은 `clean_halted`로 다듬는다 — 시가가 없으면 그날
+    시가 매수는 불가(NaN), 저가는 종가로 본다(가격이 움직이지 않았다).
     """
-    close = hist["Close"].astype(float)
-    open_next = hist["Open"].astype(float).shift(-1)
-    low = hist["Low"].astype(float)
+    clean = clean_halted(hist)
+    close = clean["Close"]
+    open_next = clean["Open"].shift(-1)
+    low = clean["Low"]
     out: dict[str, pd.Series] = {}
     for h in horizons:
         exit_px = close.shift(-h)
@@ -137,6 +141,27 @@ def forward_table(
         out[f"mdd_close_{h}"] = (fut_low / close - 1).where(exit_px.notna())
         out[f"mdd_open_{h}"] = (fut_low / open_next - 1).where(exit_px.notna())
     return pd.DataFrame(out, index=hist.index)
+
+
+def clean_halted(hist: pd.DataFrame) -> pd.DataFrame:
+    """0 이하 가격(거래정지일 등)을 정리한 OHLC 사본.
+
+    시가 NaN(그날 시가 매수 불가) · 저가·고가는 종가 · 종가 0은 NaN.
+    """
+    close = hist["Close"].astype(float)
+    close = close.where(close > 0)
+    open_ = hist["Open"].astype(float)
+    low = hist["Low"].astype(float)
+    high = hist["High"].astype(float)
+    return pd.DataFrame(
+        {
+            "Open": open_.where(open_ > 0),
+            "High": high.where(high > 0, close),
+            "Low": low.where(low > 0, close),
+            "Close": close,
+        },
+        index=hist.index,
+    )
 
 
 def stop_returns(
@@ -154,8 +179,9 @@ def stop_returns(
     i = int(hist.index.get_indexer([date])[0])
     if i < 0:
         return {h: math.nan for h in horizons}
-    closes = hist["Close"].to_numpy(dtype=float)
-    opens = hist["Open"].to_numpy(dtype=float)
+    clean = clean_halted(hist)
+    closes = clean["Close"].to_numpy(dtype=float)
+    opens = clean["Open"].to_numpy(dtype=float)
     n = len(closes)
     if entry == "close":
         entry_px = float(closes[i])
@@ -163,7 +189,7 @@ def stop_returns(
         entry_px = float(opens[i + 1]) if i + 1 < n else math.nan
     result: dict[int, float] = {}
     for h in horizons:
-        if i + h >= n or math.isnan(entry_px):
+        if i + h >= n or math.isnan(entry_px) or math.isnan(closes[i + h]):
             result[h] = math.nan
             continue
         exit_px = float(closes[i + h])
@@ -347,6 +373,23 @@ def _git_commit(repo: Path) -> str:
     except (OSError, subprocess.CalledProcessError):
         return "unknown"
     return f"{sha}{'-dirty' if dirty else ''}"
+
+
+def _replay_source_hash(repo: Path) -> str:
+    """재현 결과를 바꿀 수 있는 소스(판정·탐지·재현 코드)의 지문 — 재현 캐시 키."""
+    import hashlib
+
+    digest = hashlib.sha256()
+    files = sorted(
+        [
+            *(repo / "obscreen" / "detect").rglob("*.py"),
+            *(repo / "obscreen" / "screening").glob("*.py"),
+        ]
+        + [repo / "obscreen" / "research" / "replay.py", repo / "obscreen" / "data" / "provider.py"]
+    )
+    for path in files:
+        digest.update(path.read_bytes())
+    return digest.hexdigest()[:12]
 
 
 def load_listing(cache_dir: Path, refresh: bool) -> pd.DataFrame:
@@ -797,6 +840,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out-dir", default="reports")
     parser.add_argument("--jobs", type=int, default=4)
     parser.add_argument("--refresh", action="store_true", help="캐시를 무시하고 다시 받는다")
+    parser.add_argument(
+        "--reuse-replay",
+        action="store_true",
+        help="같은 기간·대상·커밋의 재현 결과 캐시가 있으면 다시 돌리지 않는다(수익 계산만)",
+    )
     parser.add_argument("--limit", type=int, default=None, help="(시험용) 후보 종목 수 제한")
     args = parser.parse_args(argv)
 
@@ -824,7 +872,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     calendar = [pd.Timestamp(d) for d in kospi.index if start <= d <= end]
     print(f"신호 기간 {calendar[0].date()} ~ {calendar[-1].date()} · {len(calendar)}영업일")
 
-    signals, member = run_replay(histories, listing, calendar, top_n, config, args.jobs)
+    replay_cache = cache_dir / (
+        f"replay_{calendar[0].date()}_{calendar[-1].date()}_top{top_n}_{len(listing)}"
+        f"_{_replay_source_hash(repo)}.pkl"
+    )
+    if args.reuse_replay and replay_cache.exists():
+        print(f"재현 결과 캐시 사용: {replay_cache}")
+        signals, member = pd.read_pickle(replay_cache)
+    else:
+        signals, member = run_replay(histories, listing, calendar, top_n, config, args.jobs)
+        pd.to_pickle((signals, member), replay_cache)
     markets = dict(zip(listing["Code"], listing["MarketGroup"], strict=True))
     panel = build_panel(
         signals, member, histories, indexes, markets, calendar, cost=args.cost_bps / 10_000
