@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -13,6 +14,7 @@ import pytest
 
 import app_production
 import screening_core
+from obscreen.web import investor_api
 from tests.conftest import query_rows
 from tests.support import SCREEN_DATE_COMPACT, FakePykrxStock, assert_matches_snapshot
 
@@ -66,7 +68,11 @@ def test_investor_roundtrip(fake_pykrx: FakePykrxStock, fresh_db: Path) -> None:
     assert _rows(fresh_db) == rows
 
 
-def test_investor_api_reads_back(fake_pykrx: FakePykrxStock, fresh_db: Path) -> None:
+def test_investor_api_reads_back(
+    fake_pykrx: FakePykrxStock, fresh_db: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 응답에 「얼마나 오래된 데이터인가」가 실린다(OBS-11) — 오늘을 수집 다음 날로 못 박는다.
+    monkeypatch.setattr(investor_api, "_today", lambda: date(2026, 9, 15))
     client = app_production.app.test_client()
     # `investor_trading` 테이블은 `init_db()`가 아니라 첫 수집 때 만들어진다. 수집 전 조회는
     # 「데이터 없음」(404)이지 서버 오류(500 no such table)가 아니다(OBS-9 — OBS-3이 500을
@@ -83,7 +89,8 @@ def test_investor_api_reads_back(fake_pykrx: FakePykrxStock, fresh_db: Path) -> 
     screening_core.run_and_save_investor_data(SCREEN_DATE_COMPACT)
 
     dates = client.get("/api/investor-dates").get_json()
-    assert dates == {"success": True, "dates": [SCREEN_DATE_COMPACT]}
+    assert dates["dates"] == [SCREEN_DATE_COMPACT]
+    assert dates["freshness"]["stale"] is False
 
     res = client.get("/api/investor-trading?investor_type=institution&trade_type=sell&limit=2")
     body = res.get_json()

@@ -11,7 +11,11 @@ import sys
 from collections.abc import Sequence
 
 from obscreen.data.provider import MarketCapUnavailableError
-from obscreen.screening.core import run_and_save_investor_data, run_and_save_screening
+from obscreen.screening.core import (
+    InvestorDataError,
+    run_and_save_investor_data,
+    run_and_save_screening,
+)
 
 
 def print_usage() -> None:
@@ -86,11 +90,23 @@ def main(argv: Sequence[str] | None = None) -> None:
         print("\n" + "=" * 60)
         print("2️⃣  외국인/기관 매매 데이터")
         print("=" * 60)
-        run_and_save_investor_data(target_date=target_date)
+        # 수급 수집 실패도 호출부까지 올라온다(OBS-11) — 스크리닝이 성공했어도 종료 코드 1이고
+        # 「완료」를 찍지 않는다. 옛 코드는 실패를 삼켜 두 달 동안 아무도 몰랐다.
+        investor_error = None
+        try:
+            run_and_save_investor_data(target_date=target_date)
+        except InvestorDataError as e:
+            investor_error = e
+            print(f"❌ 외국인/기관 수급 수집 실패: {e}", file=sys.stderr)
 
-        if screening_error is not None:
+        if screening_error is not None or investor_error is not None:
             print("\n" + "=" * 60)
-            print("❌ 수급 수집은 끝났지만 오더블록 스크리닝이 중단됐습니다.")
+            if screening_error is not None and investor_error is not None:
+                print("❌ 오더블록 스크리닝과 수급 수집이 모두 실패했습니다.")
+            elif screening_error is not None:
+                print("❌ 수급 수집은 끝났지만 오더블록 스크리닝이 중단됐습니다.")
+            else:
+                print("❌ 오더블록 스크리닝은 끝났지만 수급 수집이 실패했습니다.")
             print("=" * 60)
             sys.exit(1)
 
@@ -109,7 +125,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         print("\n" + "=" * 60)
         print("💰 외국인/기관 매매 데이터")
         print("=" * 60)
-        run_and_save_investor_data(target_date=target_date)
+        try:
+            run_and_save_investor_data(target_date=target_date)
+        except InvestorDataError as e:
+            print(f"❌ 외국인/기관 수급 수집 실패: {e}", file=sys.stderr)
+            sys.exit(1)
         print("\n✅ 외국인/기관 데이터 수집 완료!")
 
 

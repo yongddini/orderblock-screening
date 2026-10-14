@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import importlib
+import os
 import sqlite3
 import sys
 from datetime import datetime, timedelta
@@ -267,14 +269,94 @@ def _resolve_investor_name(stock: Any, ticker: str, raw_name: Any) -> str:
     return str(ticker)
 
 
+class InvestorDataError(RuntimeError):
+    """수급(외국인·기관) 수집 실패(OBS-11).
+
+    옛 코드는 실패를 `print`만 하고 정상 반환해서 `collect`가 「완료」·종료 코드 0으로 끝났고,
+    두 달 동안 수집이 죽어 있는 것을 아무도 몰랐다. 이제 호출부까지 올린다.
+    """
+
+
+#: 수급 응답에 반드시 있어야 하는 열 — 로그인이 안 되면 pykrx가 이 열 없는 빈 표를 준다.
+_NET_AMOUNT_COLUMN = "순매수거래대금"
+
+_INVESTOR_CONFIGS = (
+    ("외국인", "foreign"),
+    ("기관합계", "institution"),  # '기관'이 아니라 '기관합계'
+)
+
+
+def _krx_login_problem() -> str | None:
+    """KRX 로그인이 안 된 것으로 보이면 그 이유를 한 구절로 돌려준다(아니면 None).
+
+    pykrx 1.2.x는 `KRX_ID`/`KRX_PW`로 로그인하고, 실패해도 예외 없이 안내문만 찍은 뒤 빈
+    응답을 준다. 여기서는 **다시 로그인을 시도하지 않고** 이미 남은 상태만 읽는다.
+    비밀 값(ID·비밀번호)은 읽어서 내보내지 않는다 — 설정 여부만 본다.
+    """
+    missing = [name for name in ("KRX_ID", "KRX_PW") if not os.environ.get(name)]
+    if missing:
+        return f"환경변수 {'·'.join(missing)} 없음"
+    try:
+        auth = importlib.import_module("pykrx.website.comm.auth")
+    except Exception:
+        return None
+    if getattr(auth, "_auth_session", object()) is None:
+        return "로그인 세션 없음(비밀번호 변경 요구 또는 자격 증명 오류 — pykrx 안내문 확인)"
+    return None
+
+
+def _investor_failure(date_str: str, reason: str) -> InvestorDataError:
+    """실패 사유를 로그에 한 줄로 남기고(stderr) 올릴 예외를 만든다."""
+    login = _krx_login_problem()
+    if login is not None:
+        print(f"❌ [KRX 로그인 실패] {date_str} 수급 수집 불가 — {login}", file=sys.stderr)
+    message = f"{date_str} 수급 수집 실패: {reason}"
+    print(f"❌ [수급 수집 실패] {message}", file=sys.stderr)
+    return InvestorDataError(message)
+
+
+def _fetch_investor_frames(stock: Any, date_str: str) -> dict[str, Any]:
+    """네 분류(외국인·기관 × 순매수·순매도) 상위 100을 가져온다. 비면 `ValueError`."""
+    results: dict[str, Any] = {}
+    for investor_name, investor_type in _INVESTOR_CONFIGS:
+        print(f"\n  📊 {investor_name} 데이터 수집 중...")
+        frames = []
+        for market in ("KOSPI", "KOSDAQ"):
+            df = stock.get_market_net_purchases_of_equities(
+                fromdate=date_str, todate=date_str, market=market, investor=investor_name
+            )
+            if df is None or df.empty or _NET_AMOUNT_COLUMN not in df.columns:
+                raise ValueError(
+                    f"{investor_name} {market} 응답이 비었거나 '{_NET_AMOUNT_COLUMN}' 열이 없음"
+                    "(KRX 로그인 실패 또는 휴장일)"
+                )
+            df["시장"] = market
+            frames.append(df)
+
+        all_df = pd.concat(frames)
+        buy_top = all_df.nlargest(100, _NET_AMOUNT_COLUMN)
+        sell_top = all_df.nsmallest(100, _NET_AMOUNT_COLUMN)
+        results[f"{investor_type}_buy"] = buy_top
+        results[f"{investor_type}_sell"] = sell_top
+
+        print(f"    ✅ {investor_name} 순매수 상위 {len(buy_top)}개")
+        print(f"    ✅ {investor_name} 순매도 상위 {len(sell_top)}개")
+    return results
+
+
 def run_and_save_investor_data(target_date: str | None = None) -> None:
-    """외국인/기관 매매 데이터 수집 및 저장"""
+    """외국인/기관 매매 데이터 수집 및 저장.
+
+    실패하면(pykrx 없음·로그인 실패·빈 응답·예외·저장 0건) `InvestorDataError`를 올린다.
+    그날의 기존 행은 **새 데이터를 확보한 뒤** 같은 트랜잭션에서 지우고 다시 쓴다 — 가져오기에
+    실패하면 기존 행이 그대로 남는다(OBS-11).
+    """
     try:
         from pykrx import stock
     except ImportError as e:
         print(f"\n❌ pykrx import 실패: {e}")
         print(f"설치: {sys.executable} -m pip install pykrx")
-        return
+        raise InvestorDataError(f"pykrx import 실패: {e}") from e
 
     if target_date:
         date_str = target_date
@@ -302,105 +384,66 @@ def run_and_save_investor_data(target_date: str | None = None) -> None:
 
     print(f"\n📅 수집 날짜: {date_str}")
 
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS investor_trading (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            scan_date TEXT NOT NULL,
-            investor_type TEXT NOT NULL,
-            trade_type TEXT NOT NULL,
-            rank INTEGER NOT NULL,
-            code TEXT NOT NULL,
-            name TEXT NOT NULL,
-            market TEXT NOT NULL,
-            current_price REAL,
-            change_percent REAL,
-            buy_amount INTEGER,
-            sell_amount INTEGER,
-            net_amount INTEGER,
-            buy_volume INTEGER DEFAULT 0,
-            sell_volume INTEGER DEFAULT 0,
-            net_volume INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-
-    cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_investor_trading 
-        ON investor_trading(scan_date, investor_type, trade_type, rank)
-    """)
-
-    cursor.execute("DELETE FROM investor_trading WHERE scan_date = ?", (date_str,))
-    conn.commit()
-    conn.close()
-
+    # 1) 먼저 가져온다 — 여기서 실패하면 DB는 건드리지 않는다.
+    print("\n🌍 외국인/기관 매매동향 수집 중...")
     try:
-        print("\n🌍 외국인/기관 매매동향 수집 중...")
+        results_data = _fetch_investor_frames(stock, date_str)
+    except Exception as e:
+        raise _investor_failure(date_str, str(e)) from e
 
-        results_data = {}
+    categories = [
+        ("foreign", "buy", results_data["foreign_buy"]),
+        ("foreign", "sell", results_data["foreign_sell"]),
+        ("institution", "buy", results_data["institution_buy"]),
+        ("institution", "sell", results_data["institution_sell"]),
+    ]
 
-        # 외국인, 기관합계 데이터 수집
-        investor_configs = [
-            ("외국인", "foreign"),
-            ("기관합계", "institution"),  # ✅ '기관' → '기관합계'
-        ]
+    # 전체 종목 OHLCV 일괄 조회 (KOSPI + KOSDAQ 각 1회씩, 총 2회 호출)
+    print(f"\n📊 {date_str} 기준 전체 종목 OHLCV 일괄 조회 중...")
 
-        for investor_name, investor_type in investor_configs:
-            print(f"\n  📊 {investor_name} 데이터 수집 중...")
+    ohlcv_all = pd.DataFrame()
+    for market in ["KOSPI", "KOSDAQ"]:
+        try:
+            market_df = stock.get_market_ohlcv(date_str, market=market)
+            if market_df is not None and not market_df.empty:
+                ohlcv_all = pd.concat([ohlcv_all, market_df])
+                print(f"  ✅ {market}: {len(market_df)}개 종목")
+            else:
+                print(f"  ⚠️ {market}: 빈 응답 (휴장일 가능)")
+        except Exception as e:
+            print(f"  ⚠️ {market} OHLCV 조회 실패: {e}")
 
-            kospi_df = stock.get_market_net_purchases_of_equities(
-                fromdate=date_str, todate=date_str, market="KOSPI", investor=investor_name
+    # 2) 새 데이터를 손에 쥔 뒤에 지우고 쓴다 — 한 트랜잭션이라 중간에 실패하면 되돌아간다.
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS investor_trading (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                scan_date TEXT NOT NULL,
+                investor_type TEXT NOT NULL,
+                trade_type TEXT NOT NULL,
+                rank INTEGER NOT NULL,
+                code TEXT NOT NULL,
+                name TEXT NOT NULL,
+                market TEXT NOT NULL,
+                current_price REAL,
+                change_percent REAL,
+                buy_amount INTEGER,
+                sell_amount INTEGER,
+                net_amount INTEGER,
+                buy_volume INTEGER DEFAULT 0,
+                sell_volume INTEGER DEFAULT 0,
+                net_volume INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_investor_trading
+            ON investor_trading(scan_date, investor_type, trade_type, rank)
+        """)
+        conn.commit()
 
-            kosdaq_df = stock.get_market_net_purchases_of_equities(
-                fromdate=date_str, todate=date_str, market="KOSDAQ", investor=investor_name
-            )
-
-            kospi_df["시장"] = "KOSPI"
-            kosdaq_df["시장"] = "KOSDAQ"
-
-            all_df = pd.concat([kospi_df, kosdaq_df])
-
-            buy_top = all_df.nlargest(100, "순매수거래대금")
-            sell_top = all_df.nsmallest(100, "순매수거래대금")
-
-            results_data[f"{investor_type}_buy"] = buy_top
-            results_data[f"{investor_type}_sell"] = sell_top
-
-            print(f"    ✅ {investor_name} 순매수 상위 {len(buy_top)}개")
-            print(f"    ✅ {investor_name} 순매도 상위 {len(sell_top)}개")
-
-        conn = sqlite3.connect(DB_PATH)
-        saved_count = 0
-
-        categories = [
-            ("foreign", "buy", results_data["foreign_buy"]),
-            ("foreign", "sell", results_data["foreign_sell"]),
-            ("institution", "buy", results_data["institution_buy"]),
-            ("institution", "sell", results_data["institution_sell"]),
-        ]
-
-        # 전체 종목 OHLCV 일괄 조회 (KOSPI + KOSDAQ 각 1회씩, 총 2회 호출)
-        print("\n📊 전체 종목 OHLCV 일괄 조회 중...")
-        ohlcv_all = pd.DataFrame()
-        # 전체 종목 OHLCV 일괄 조회 (KOSPI + KOSDAQ 각 1회씩, 총 2회 호출)
-        print(f"\n📊 {date_str} 기준 전체 종목 OHLCV 일괄 조회 중...")
-
-        ohlcv_all = pd.DataFrame()
-        for market in ["KOSPI", "KOSDAQ"]:
-            try:
-                market_df = stock.get_market_ohlcv(date_str, market=market)
-                if market_df is not None and not market_df.empty:
-                    ohlcv_all = pd.concat([ohlcv_all, market_df])
-                    print(f"  ✅ {market}: {len(market_df)}개 종목")
-                else:
-                    print(f"  ⚠️ {market}: 빈 응답 (휴장일 가능)")
-            except Exception as e:
-                print(f"  ⚠️ {market} OHLCV 조회 실패: {e}")
-
-        conn = sqlite3.connect(DB_PATH)
+        conn.execute("DELETE FROM investor_trading WHERE scan_date = ?", (date_str,))
         saved_count = 0
 
         for investor_type, trade_type, df in categories:
@@ -461,16 +504,19 @@ def run_and_save_investor_data(target_date: str | None = None) -> None:
                     print(f"  ⚠️ {ticker} 저장 실패: {e}")
                     continue
 
+        if saved_count == 0:
+            conn.rollback()
+            raise _investor_failure(date_str, "저장된 행이 0개(기존 행은 그대로 둠)")
         conn.commit()
+    except InvestorDataError:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise _investor_failure(date_str, f"DB 저장 중 오류: {e}") from e
+    finally:
         conn.close()
 
-        print(f"\n✅ 총 {saved_count}개 종목 DB 저장 완료")
-
-    except Exception as e:
-        print(f"❌ 데이터 수집 실패: {e}")
-        import traceback
-
-        traceback.print_exc()
+    print(f"\n✅ 총 {saved_count}개 종목 DB 저장 완료")
 
 
 if __name__ == "__main__":

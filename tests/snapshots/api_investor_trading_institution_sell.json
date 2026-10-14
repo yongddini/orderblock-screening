@@ -31,6 +31,15 @@
   }
  ],
  "date": "20260914",
+ "freshness": {
+  "days_old": 1,
+  "expected_date": "20260914",
+  "latest_date": "20260914",
+  "missed_business_days": 0,
+  "stale": false,
+  "today": "20260915",
+  "warning": null
+ },
  "investor_type": "institution",
  "success": true,
  "trade_type": "sell"

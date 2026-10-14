@@ -102,6 +102,15 @@ tests/                  # pytest — 스모크 + 현행 동작 고정 특성 테
   수집이 실패하면 스크립트는 **종료 코드 1**로 끝나고 stderr에 한 줄 낸다(옛 코드는 무조건 `exit 0`).
   서버 반영·crontab 대안은 `docs/ops/obs-13-daily-screening-permission.md`.
 
+- 🚨 **수급 수집 실패는 조용히 넘어가지 않는다(OBS-11)** — `run_and_save_investor_data`는 실패하면
+  (pykrx 없음·KRX 로그인 실패·빈 응답·예외·저장 0건) `InvestorDataError`를 올리고, `obscreen collect`
+  (`--all`·`--investor`)는 **종료 코드 1**로 끝나며 「완료」를 찍지 않는다. 그날의 기존 행은 **새
+  데이터를 확보한 뒤** 한 트랜잭션에서 지우고 쓴다(가져오기 전에 지우지 말 것). KRX 로그인 문제는
+  stderr에 `❌ [KRX 로그인 실패] …` **한 줄**로 남는다(ID·비밀번호 값은 찍지 않는다 — 설정 여부만).
+  `/api/investor-trading`·`/api/investor-dates` 응답의 `freshness`(최근 수집일·직전 영업일·빠진
+  영업일 수·`stale`·`warning`)가 화면 경고의 근거다 — 판단은 서버 한 곳에서만 한다. 옛 코드는 실패를
+  삼켜 2026-08~09 두 달간 수집이 죽어 있는 것을 아무도 몰랐다.
+
 - **차트는 Lightweight Charts 한 가지다(OBS-10)** — AlphaBlock과 같은 v5.2.0을 `static/vendor/`에
   벤더링하고 `static/js/ob_chart.js`가 캔들 + 존 박스(캔버스 프리미티브 **하나**) + RSI 보조창을
   그린다. 존마다 시리즈를 만들지 말 것(AlphaBlock에서 2,000개에 브라우저가 멈췄다). 순수 함수는
