@@ -21,6 +21,7 @@
         .btn:hover { background: #4a4a4a; }
         .btn.active { background: #4dd0c0; color: #1e1e1e; border-color: #4dd0c0; }
         .date-info { text-align: center; color: #aaa; font-size: 14px; margin-bottom: 20px; }
+        .stale-warning { display: none; background: rgba(255,152,0,0.15); border: 1px solid #ff9800; color: #ffb74d; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; font-weight: 600; text-align: center; }
         table { width: 100%; border-collapse: collapse; background: #2d2d2d; border-radius: 8px; overflow: hidden; }
         thead { background: #3a3a3a; }
         th { padding: 15px; text-align: left; font-weight: 600; font-size: 13px; color: #aaa; border-bottom: 2px solid #444; }
@@ -65,6 +66,7 @@
                 </div>
             </div>
         </div>
+        <div class="stale-warning" id="stale-warning" role="alert"></div>
         <div class="date-info" id="date-info">-</div>
         <table>
             <thead>
@@ -127,6 +129,17 @@
                     return;
                 }
                 
+                // OBS-11: 수집이 실패 중이면 옛 데이터가 조용히 보인다 — 서버가 준 경고를 띄운다.
+                const staleBox = document.getElementById('stale-warning');
+                const freshness = data.freshness || {};
+                if (freshness.stale && freshness.warning) {
+                    staleBox.textContent = '⚠️ ' + freshness.warning;
+                    staleBox.style.display = 'block';
+                } else {
+                    staleBox.textContent = '';
+                    staleBox.style.display = 'none';
+                }
+
                 const dateStr = data.date;
                 document.getElementById('date-info').textContent = `${dateStr.substring(0,4)}-${dateStr.substring(4,6)}-${dateStr.substring(6,8)} 기준`;
                 
