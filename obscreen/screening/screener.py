@@ -13,8 +13,8 @@ import pandas as pd
 from tqdm import tqdm
 
 from obscreen.data.provider import KoreanStockDataProvider
+from obscreen.detect.adapter import DEFAULT_PARAMS, AlphaBlockOrderBlockDetector
 from obscreen.detect.orderblock import OrderBlockInfo
-from obscreen.detect.realtime import RealtimeOrderBlockDetector
 
 
 class StockScreener:
@@ -23,10 +23,10 @@ class StockScreener:
     def __init__(
         self,
         proximity_percent: float = 1.0,
-        swing_length: int = 10,
-        max_atr_mult: float = 2.0,
+        swing_length: int = DEFAULT_PARAMS.swing_length,
+        max_atr_mult: float = DEFAULT_PARAMS.max_atr_mult,
         ob_end_method: str = "Wick",
-        combine_obs: bool = True,
+        combine_obs: bool = DEFAULT_PARAMS.combine_obs,
         max_workers: int = 4,
     ) -> None:
         """
@@ -35,7 +35,7 @@ class StockScreener:
             swing_length (int): 스윙 감지 길이
             max_atr_mult (float): 최대 ATR 배수
             ob_end_method (str): 오더블록 무효화 방식
-            combine_obs (bool): 오더블록 합치기 (기본 True)
+            combine_obs (bool): 오더블록 합치기 (기본값은 AlphaBlock과 같은 False — OBS-5)
             max_workers (int): 병렬 처리 워커 수
         """
         self.proximity_percent = proximity_percent
@@ -154,19 +154,16 @@ class StockScreener:
             if len(df) < 50:
                 return None
 
-            # 오더블록 감지 (실시간 방식, Combine 적용)
-            detector = RealtimeOrderBlockDetector(
+            # 오더블록 감지 (AlphaBlock 탐지기, OBS-5)
+            detector = AlphaBlockOrderBlockDetector(
                 swing_length=self.swing_length,
                 max_atr_mult=self.max_atr_mult,
                 ob_end_method=self.ob_end_method,
                 combine_obs=self.combine_obs,
             )
             detector.detect_order_blocks_realtime(df)
+            # 방향별 최신 3개(AlphaBlock `zone_count="low"` — 주봉과 같은 규칙, OBS-5)
             bull_obs, bear_obs = detector.get_latest_orderblocks()
-
-            # Zone Count: Low (최신 3개씩)
-            bull_obs = bull_obs[:3]
-            bear_obs = bear_obs[:3]
 
             # 현재가
             current_price = df["Close"].iloc[-1]
@@ -554,8 +551,8 @@ class StockScreener:
         if df is None or len(df) < 50:
             return None
 
-        # 주봉 OB 감지
-        detector = RealtimeOrderBlockDetector(
+        # 주봉 OB 감지 (AlphaBlock 탐지기, OBS-5)
+        detector = AlphaBlockOrderBlockDetector(
             swing_length=self.swing_length,
             max_atr_mult=self.max_atr_mult,
             ob_end_method=self.ob_end_method,

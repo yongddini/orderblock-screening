@@ -19,14 +19,6 @@
  "orderblocks": {
   "bear": [
    {
-    "bottom": 433000.0,
-    "break_time": null,
-    "breaker": false,
-    "combined": false,
-    "start_time": 1627603200,
-    "top": 465000.0
-   },
-   {
     "bottom": 324000.0,
     "break_time": null,
     "breaker": false,
@@ -53,20 +45,20 @@
     "top": 195200.0
    },
    {
-    "bottom": 151100.0,
-    "break_time": null,
-    "breaker": false,
-    "combined": false,
-    "start_time": 1723161600,
-    "top": 170000.0
-   },
-   {
     "bottom": 334500.0,
     "break_time": 1642118400,
     "breaker": true,
     "combined": false,
     "start_time": 1620950400,
     "top": 364000.0
+   },
+   {
+    "bottom": 135000.0,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "start_time": 1584662400,
+    "top": 166500.0
    }
   ]
  },

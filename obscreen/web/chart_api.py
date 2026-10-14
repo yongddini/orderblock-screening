@@ -1,7 +1,7 @@
 """차트 데이터 API — `/api/chart-data/*`(Lightweight Charts, OBS-10).
 
 OBS-4: 본문을 그대로 옮겼다. 탐지기 클래스는 `deps.detector_class()`가 조합 루트
-(`obscreen.web.app.RealtimeOrderBlockDetector`)에서 호출 시점에 읽는다.
+(`obscreen.web.app.AlphaBlockOrderBlockDetector`, OBS-5)에서 호출 시점에 읽는다.
 """
 
 from __future__ import annotations
@@ -70,14 +70,11 @@ def get_chart_data(ticker: str) -> ResponseReturnValue:
             max_atr_mult=settings.max_atr_mult,
             ob_end_method=settings.ob_end_method,
             combine_obs=settings.combine_obs,
-            max_order_blocks=settings.chart_max_order_blocks,
         )
 
         detector.detect_order_blocks_realtime(df)
+        # 방향별 최신 3개(AlphaBlock `zone_count="low"`) — 스크리너가 본 그 존들이다(OBS-5)
         bull_obs, bear_obs = detector.get_latest_orderblocks()
-
-        bull_obs = bull_obs[:3]
-        bear_obs = bear_obs[:3]
 
         # Lightweight Charts format
         candles = []
@@ -199,14 +196,11 @@ def get_chart_data_weekly(ticker: str) -> ResponseReturnValue:
             max_atr_mult=settings.max_atr_mult,
             ob_end_method=settings.ob_end_method,
             combine_obs=settings.combine_obs,
-            max_order_blocks=settings.chart_max_order_blocks,
         )
 
         detector.detect_order_blocks_realtime(df)
+        # 방향별 최신 3개(AlphaBlock `zone_count="low"`) — 스크리너가 본 그 존들이다(OBS-5)
         bull_obs, bear_obs = detector.get_latest_orderblocks()
-
-        bull_obs = bull_obs[:3]
-        bear_obs = bear_obs[:3]
 
         # Lightweight Charts format
         candles = []

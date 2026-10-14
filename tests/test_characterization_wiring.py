@@ -4,6 +4,9 @@
 3.0 → 3.5`)가 고정 입력 14종목에서 결과를 안 바꿔 통과한다. 그런데 리모델링 3(OBS-4)이
 바로 이 숫자들을 설정 파일로 옮긴다 — 옮기다 값이 바뀌면 이 테스트가 잡아야 한다.
 
+OBS-5: 탐지기가 AlphaBlock 것으로 바뀌며 탐지 값이 AlphaBlock 기본값(ATR 배수 3.5 · 병합 안 함 ·
+존 3개)으로 **의도적으로** 옮겨졌다 — 아래 기대값이 그 결정을 못 박는다.
+
 생성자를 감싼 스파이가 **실제로 넘어간 인자**(기본값을 채운 최종값)를 기록한다. 레거시
 코드는 건드리지 않고, 감싼 클래스는 진짜 클래스를 상속하므로 동작도 그대로다.
 """
@@ -21,7 +24,7 @@ import pytest
 import app_production
 import screening_core
 import stock_screener
-from realtime_detector import RealtimeOrderBlockDetector
+from obscreen.detect.adapter import AlphaBlockOrderBlockDetector
 from stock_screener import StockScreener
 from tests.conftest import query_rows
 from tests.support import SCREEN_DATE_COMPACT, FakeFdr, assert_matches_snapshot
@@ -53,25 +56,27 @@ def test_run_and_save_screening_wiring(
     detectors: list[dict[str, Any]] = []
     monkeypatch.setattr(screening_core, "StockScreener", _spy(StockScreener, screeners))
     monkeypatch.setattr(
-        stock_screener, "RealtimeOrderBlockDetector", _spy(RealtimeOrderBlockDetector, detectors)
+        stock_screener,
+        "AlphaBlockOrderBlockDetector",
+        _spy(AlphaBlockOrderBlockDetector, detectors),
     )
 
     screening_core.run_and_save_screening(SCREEN_DATE_COMPACT)
 
     # 만든 순서: 일봉 주식 → 일봉 ETF → 주봉. 값은 스냅샷과 별개로 명시적으로도 건다.
     assert [s["proximity_percent"] for s in screeners] == [3.0, 1.0, 5.0]
-    assert {s["max_atr_mult"] for s in screeners} == {2.0}
+    assert {s["max_atr_mult"] for s in screeners} == {3.5}  # OBS-5: AlphaBlock 기본값
     assert {s["swing_length"] for s in screeners} == {10}
     assert {s["ob_end_method"] for s in screeners} == {"Wick"}
-    assert {s["combine_obs"] for s in screeners} == {True}
+    assert {s["combine_obs"] for s in screeners} == {False}  # OBS-5: AlphaBlock 기본값
     assert detectors, "스크리너가 탐지기를 하나도 안 만들었다 — 스파이가 안 걸렸다"
     assert _distinct(detectors) == [
         {
             "swing_length": 10,
-            "max_atr_mult": 2.0,
-            "max_order_blocks": 30,
+            "max_atr_mult": 3.5,
             "ob_end_method": "Wick",
-            "combine_obs": True,
+            "combine_obs": False,
+            "zone_count": "low",
         }
     ]
     assert_matches_snapshot(
@@ -89,18 +94,18 @@ def test_chart_api_wiring(
     detectors: list[dict[str, Any]] = []
     monkeypatch.setattr(
         app_production,
-        "RealtimeOrderBlockDetector",
-        _spy(RealtimeOrderBlockDetector, detectors),
+        "AlphaBlockOrderBlockDetector",
+        _spy(AlphaBlockOrderBlockDetector, detectors),
     )
     res = app_production.app.test_client().get(f"/api/{route}/{ticker}?date={SCREEN_DATE_COMPACT}")
     assert res.status_code == 200
     assert detectors == [
         {
             "swing_length": 10,
-            "max_atr_mult": 2.0,
-            "max_order_blocks": 30,
+            "max_atr_mult": 3.5,
             "ob_end_method": "Wick",
-            "combine_obs": True,
+            "combine_obs": False,
+            "zone_count": "low",
         }
     ]
     assert_matches_snapshot(f"wiring_api_{route}", detectors)
@@ -109,16 +114,16 @@ def test_chart_api_wiring(
 def test_spy_records_defaults_and_overrides() -> None:
     """스파이 자체 검산 — 기본값이 채워지고, 넘긴 값이 기록되며, 동작은 진짜와 같다."""
     calls: list[dict[str, Any]] = []
-    spy_cls = _spy(RealtimeOrderBlockDetector, calls)
+    spy_cls = _spy(AlphaBlockOrderBlockDetector, calls)
     det = spy_cls(max_atr_mult=2.5)
-    assert isinstance(det, RealtimeOrderBlockDetector)
+    assert isinstance(det, AlphaBlockOrderBlockDetector)
     assert calls == [
         {
             "swing_length": 10,
             "max_atr_mult": 2.5,
-            "max_order_blocks": 30,
             "ob_end_method": "Wick",
             "combine_obs": False,
+            "zone_count": "low",
         }
     ]
 
@@ -138,14 +143,16 @@ def test_operational_proximity_by_value(
         top = price * (1 - 0.032)
         return [OrderBlockInfo(top, top * 0.98, 0, "Bull", None)], []
 
-    real_detect: Callable[..., None] = RealtimeOrderBlockDetector.detect_order_blocks_realtime
+    real_detect: Callable[..., Any] = AlphaBlockOrderBlockDetector.detect_order_blocks_realtime
 
-    def remember_close(self: Any, df: Any) -> None:
+    def remember_close(self: Any, df: Any) -> Any:
         self._last_close = df["Close"].iloc[-1]
-        real_detect(self, df)
+        return real_detect(self, df)
 
-    monkeypatch.setattr(RealtimeOrderBlockDetector, "detect_order_blocks_realtime", remember_close)
-    monkeypatch.setattr(RealtimeOrderBlockDetector, "get_latest_orderblocks", fake_latest)
+    monkeypatch.setattr(
+        AlphaBlockOrderBlockDetector, "detect_order_blocks_realtime", remember_close
+    )
+    monkeypatch.setattr(AlphaBlockOrderBlockDetector, "get_latest_orderblocks", fake_latest)
 
     screening_core.run_and_save_screening(SCREEN_DATE_COMPACT)
     rows = query_rows(fresh_db, "SELECT market, timeframe, distance_percent FROM screening_results")

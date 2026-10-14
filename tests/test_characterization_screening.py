@@ -325,14 +325,16 @@ def test_recommendation_flags(
 
 
 @pytest.mark.parametrize("weekly", [False, True])
-def test_zone_count_low_keeps_latest_three(
+def test_screener_does_not_cut_zones_itself(
     weekly: bool, fake_fdr: FakeFdr, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """「Zone Count: Low」 — 일봉은 최신 3개 존만 본다(4번째가 맞아도 무시). 주봉은 자르지 않는다.
+    """존 개수 규칙은 탐지기(AlphaBlock `zone_count="low"`) 한 곳에만 있다(OBS-5).
 
-    ⚠️ 일봉·주봉이 다르다는 것도 현행 동작 그대로 고정한다(주봉 경로엔 `[:3]`이 없다).
+    OBS-5 전에는 일봉 스크리너가 `[:3]`로 따로 잘랐고 주봉은 안 잘랐다(버그 후보 6). 이제
+    스크리너는 탐지기가 준 존을 그대로 보므로 일봉·주봉이 같다 — 4번째 존이 와도 본다.
+    (탐지기가 실제로 3개만 주는지는 `test_characterization_detector.py`가 건다.)
     """
-    import realtime_detector
+    from obscreen.detect.adapter import AlphaBlockOrderBlockDetector
 
     far = [_ob(10.0, 9.0, "Bull") for _ in range(3)]
     df = KoreanStockDataProvider.get_price_data("228670", 500, SCREEN_DATE)
@@ -340,13 +342,13 @@ def test_zone_count_low_keeps_latest_three(
     hit = _ob(price * 1.01, price * 0.99, "Bull")  # 현재가를 품은 4번째 존
 
     monkeypatch.setattr(
-        realtime_detector.RealtimeOrderBlockDetector,  # stock_screener가 쓰는 바로 그 클래스
+        AlphaBlockOrderBlockDetector,  # stock_screener가 쓰는 바로 그 클래스
         "get_latest_orderblocks",
         lambda self: ([*far, hit], []),
     )
     screener = StockScreener(proximity_percent=3.0)
     if weekly:
         result = screener.check_proximity_weekly("228670", 500, SCREEN_DATE)
-        assert result is not None and result["status"] == "내부-지지"
     else:
-        assert screener.check_proximity("228670", 500, SCREEN_DATE) is None
+        result = screener.check_proximity("228670", 500, SCREEN_DATE)
+    assert result is not None and result["status"] == "내부-지지"

@@ -1,75 +1,117 @@
 {
+ "archive_close": {
+  "broken": 12,
+  "bull": 5,
+  "swept": 12,
+  "zones": 14
+ },
+ "archive_combine": {
+  "broken": 12,
+  "bull": 5,
+  "swept": 12,
+  "zones": 14
+ },
+ "archive_default": {
+  "broken": 12,
+  "bull": 5,
+  "swept": 12,
+  "zones": 14
+ },
  "bars": 498,
  "first": "2024-08-26T00:00:00",
  "last": "2026-09-14T00:00:00",
- "latest_combine_False": {
-  "bear": [],
-  "bull": [
+ "latest_close": {
+  "bear": [
    {
     "bb_volume": 0,
-    "bottom": 3680,
+    "bottom": 9820.0,
     "break_time": null,
     "breaker": false,
     "combined": false,
-    "ob_high_volume": 1059250,
-    "ob_low_volume": 84909,
-    "ob_volume": 1144159,
+    "ob_high_volume": 81100.0,
+    "ob_low_volume": 218435.0,
+    "ob_volume": 299535.0,
+    "start_time": "2026-04-17T00:00:00",
+    "top": 11690.0,
+    "type": "Bear"
+   }
+  ],
+  "bull": [
+   {
+    "bb_volume": 0,
+    "bottom": 3680.0,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 1059250.0,
+    "ob_low_volume": 84909.0,
+    "ob_volume": 1144159.0,
     "start_time": "2026-07-30T00:00:00",
-    "top": 4560,
+    "top": 4560.0,
     "type": "Bull"
    }
   ]
  },
- "latest_combine_True": {
-  "bear": [],
-  "bull": [
+ "latest_combine": {
+  "bear": [
    {
     "bb_volume": 0,
-    "bottom": 3680,
+    "bottom": 9820.0,
     "break_time": null,
     "breaker": false,
     "combined": false,
-    "ob_high_volume": 1059250,
-    "ob_low_volume": 84909,
-    "ob_volume": 1144159,
+    "ob_high_volume": 81100.0,
+    "ob_low_volume": 218435.0,
+    "ob_volume": 299535.0,
+    "start_time": "2026-04-17T00:00:00",
+    "top": 11690.0,
+    "type": "Bear"
+   }
+  ],
+  "bull": [
+   {
+    "bb_volume": 0,
+    "bottom": 3680.0,
+    "break_time": null,
+    "breaker": false,
+    "combined": false,
+    "ob_high_volume": 1059250.0,
+    "ob_low_volume": 84909.0,
+    "ob_volume": 1144159.0,
     "start_time": "2026-07-30T00:00:00",
-    "top": 4560,
+    "top": 4560.0,
     "type": "Bull"
    }
   ]
  },
- "raw_Close": {
-  "bear": [],
-  "bull": [
+ "latest_default": {
+  "bear": [
    {
     "bb_volume": 0,
-    "bottom": 3680,
+    "bottom": 9820.0,
     "break_time": null,
     "breaker": false,
     "combined": false,
-    "ob_high_volume": 1059250,
-    "ob_low_volume": 84909,
-    "ob_volume": 1144159,
-    "start_time": "2026-07-30T00:00:00",
-    "top": 4560,
-    "type": "Bull"
+    "ob_high_volume": 81100.0,
+    "ob_low_volume": 218435.0,
+    "ob_volume": 299535.0,
+    "start_time": "2026-04-17T00:00:00",
+    "top": 11690.0,
+    "type": "Bear"
    }
-  ]
- },
- "raw_Wick": {
-  "bear": [],
+  ],
   "bull": [
    {
     "bb_volume": 0,
-    "bottom": 3680,
+    "bottom": 3680.0,
     "break_time": null,
     "breaker": false,
     "combined": false,
-    "ob_high_volume": 1059250,
-    "ob_low_volume": 84909,
-    "ob_volume": 1144159,
+    "ob_high_volume": 1059250.0,
+    "ob_low_volume": 84909.0,
+    "ob_volume": 1144159.0,
     "start_time": "2026-07-30T00:00:00",
-    "top": 4560,
+    "top": 4560.0,
     "type": "Bull"
    }
   ]

@@ -23,12 +23,14 @@ uv run pytest            # 전부(네트워크 호출 0 — conftest가 TCP·DNS
 
 | 파일 | 고정하는 것 |
 | -- | -- |
-| `test_characterization_detector.py` | 탐지기(`realtime_detector`) 원시·최종 존(위·아래·시작/무효화 시각·상태·거래량) × 일봉/주봉 × Wick/Close × 병합 켬/끔, `indicators` 값, 일봉→주봉 변환, **합성 입력 경계**(무효화 부등호·ATR 필터) |
+| `test_characterization_detector.py` | 탐지기(OBS-5부터 AlphaBlock — `obscreen.detect.adapter`) 최종 존(위·아래·시작/무효화 시각·상태·거래량)과 존 대장 개수 × 일봉/주봉 × 기본값/Close/병합 켬, 일봉→주봉 변환, **합성 입력 경계**(무효화 부등호·ATR 필터·소멸), 방향별 최신 3개 규칙 |
+| `test_alphablock_parity.py` | AlphaBlock 동등성(OBS-5) — 복사본 = 원본 코드(해시 · 로컬은 AlphaBlock 그 커밋과 바이트 대조), 같은 입력 → AlphaBlock 원본으로 만든 골든(`fixtures/alphablock_golden/`)과 같은 존 대장, 어댑터가 렌더 뷰를 그대로 옮기는지 |
+| `test_obs5_change_table.py` | 옛 탐지기 대비 변화 표(`docs/obs-5-detector-change.md`)가 스냅샷과 맞는지 — 표는 `tests/tools/obs5_detector_diff.py`가 옛 커밋 스냅샷과 지금 스냅샷을 맞대 만든다 |
 | `test_characterization_screening.py` | 근접도 분류(`classify_position`) 경계, 종목별 `check_proximity(_weekly)`, 종목 선정(시총 상위·ETF 제외 규칙), 시장 스크리닝, `run_and_save_screening` DB 행 · 추천 플래그(bit1·bit2) · 주말/공휴일 |
 | `test_characterization_investor.py` | 수급(외국인·기관) 저장 → 임시 SQLite → 표·API 왕복 |
 | `test_characterization_api.py` | `/api/screening/*`·`/api/chart-data(-weekly)/*`·`/api/stock/*`·`/health` 응답 모양(키·타입) + 차트 오더블록 값 |
 | `test_market_cap_selection.py` | 시총 상위 N 선정(OBS-7) — `Marcap` 전부 NaN 입력에서 `Close × Stocks` 순위 · `KOSDAQ GLOBAL` 포함/KONEX 제외 · `Marcap`이 오면 그 값 우선 · 시총 미상 비율 방어(5%)와 기존 결과 보존 · `collect_data --all`의 수급 계속 + 종료 코드 1 |
-| `test_characterization_wiring.py` | 운영 경로가 **넘기는 설정값** — `run_and_save_screening`의 `StockScreener` 3개(근접도 3/1/5%·ATR 배수 2.0 등)와 차트 API의 `RealtimeOrderBlockDetector` 인자를 생성자 스파이로 기록(기본값 포함). 필터를 **푸는** 변화는 출력 스냅샷으로 안 잡히기 때문(OBS-4가 이 숫자들을 설정으로 옮긴다) + 근접도를 값으로 거는 합성 존(현재가 3.2% 아래) |
+| `test_characterization_wiring.py` | 운영 경로가 **넘기는 설정값** — `run_and_save_screening`의 `StockScreener` 3개(근접도 3/1/5%·ATR 배수 2.0 등)와 차트 API의 탐지기(`AlphaBlockOrderBlockDetector`, OBS-5) 인자를 생성자 스파이로 기록(기본값 포함). 필터를 **푸는** 변화는 출력 스냅샷으로 안 잡히기 때문(OBS-4가 이 숫자들을 설정으로 옮긴다) + 근접도를 값으로 거는 합성 존(현재가 3.2% 아래) |
 | `test_chart_frontend.py` | 차트 화면(OBS-10) — ECharts 제거·벤더링 라이브러리 서빙, `static/js/ob_chart.js` 존 박스 규칙을 node로, 실제 `/api/chart-data*` 응답의 존 ↔ 박스 가격대·시작 봉 정합(node 없으면 건너뜀) |
 | `test_structure.py` | 패키지 구조(OBS-4) — 옛 모듈 이름이 `obscreen` 모듈의 **같은 객체**(별칭)인지, 중복 함수·루트 `index.html`이 없는지, 설정 기본값 = 옮기기 전 숫자, 서버 경로 하드코딩 0건, 실험 라우트 스위치와 화면 URL, `obscreen` CLI |
 | `support.py` | 가짜 FinanceDataReader·pykrx, 스냅샷 비교기 |
@@ -79,5 +81,5 @@ git diff --stat tests/snapshots/     # 무엇이 바뀌었나
    자기 함수로 덮어쓴다**(두 벌)~~ — **OBS-4가 하나로 합쳤다**(`test_structure.py`). cron은
    원래 `screening_core` 판을 썼다 —
    이 테스트도 그쪽을 고정한다.
-6. **일봉과 주봉의 존 개수 규칙이 다르다** — 일봉 `check_proximity`는 최신 3개 존만 보는데
-   (`[:3]`, 「Zone Count: Low」) 주봉 `check_proximity_weekly`에는 그 절단이 없다.
+6. ~~**일봉과 주봉의 존 개수 규칙이 다르다**~~ — **OBS-5가 하나로 합쳤다.** 존 개수는 탐지기
+   (AlphaBlock `zone_count="low"` = 방향별 최신 3개) 한 곳에서만 정하고 스크리너는 자르지 않는다.

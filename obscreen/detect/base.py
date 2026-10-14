@@ -2,7 +2,8 @@
 
 스크리너(`obscreen.screening.screener`)와 차트 API(`obscreen.web.chart_api`)는 탐지기에
 딱 두 가지를 기대한다: 시세 전체를 한 번 훑는 것과, 마지막 시점에 살아 있는 강세·약세 존을
-돌려주는 것. 지금 구현은 `obscreen.detect.realtime.RealtimeOrderBlockDetector`다.
+돌려주는 것. 지금 구현은 `obscreen.detect.adapter.AlphaBlockOrderBlockDetector`다(OBS-5 —
+AlphaBlock 탐지기 복사본 `obscreen.detect.alphablock` + 국장 데이터 어댑터).
 """
 
 from __future__ import annotations

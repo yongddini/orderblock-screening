@@ -15,12 +15,12 @@ from flask import Flask
 
 from obscreen.config import get_settings
 from obscreen.data import store
-from obscreen.detect.realtime import RealtimeOrderBlockDetector
+from obscreen.detect.adapter import AlphaBlockOrderBlockDetector
 from obscreen.screening.core import run_and_save_investor_data, run_and_save_screening
 
 __all__ = [
+    "AlphaBlockOrderBlockDetector",
     "DB_PATH",
-    "RealtimeOrderBlockDetector",
     "app",
     "create_app",
     "init_db",

@@ -30,9 +30,7 @@ LEGACY_ALIASES = {
     "app_production": "obscreen.web.app",
     "screening_core": "obscreen.screening.core",
     "stock_screener": "obscreen.screening.screener",
-    "realtime_detector": "obscreen.detect.realtime",
     "orderblock_info": "obscreen.detect.orderblock",
-    "indicators": "obscreen.detect.indicators",
     "data_provider": "obscreen.data.provider",
     "collect_data": "obscreen.collect",
 }
@@ -66,6 +64,16 @@ def test_legacy_name_is_the_same_module(legacy: str, target: str) -> None:
     assert importlib.import_module(legacy) is importlib.import_module(target)
 
 
+@pytest.mark.parametrize(
+    "name",
+    ["realtime_detector", "indicators", "obscreen.detect.realtime", "obscreen.detect.indicators"],
+)
+def test_old_detector_is_removed(name: str) -> None:
+    """옛 자체 탐지기와 그 전용 지표 모듈은 OBS-5가 지웠다(AlphaBlock 탐지기로 교체)."""
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module(name)
+
+
 def test_single_run_and_save_screening() -> None:
     assert app_production.run_and_save_screening is screening_core.run_and_save_screening
     assert app_production.run_and_save_screening.__module__ == "obscreen.screening.core"
@@ -89,13 +97,13 @@ def test_settings_defaults_match_pre_obs4_literals(monkeypatch: pytest.MonkeyPat
     s = Settings(_env_file=None)
     assert (s.screening_top_n, s.screening_etf_n) == (400, 300)
     assert (s.proximity_stock_daily, s.proximity_etf_daily, s.proximity_weekly) == (3.0, 1.0, 5.0)
+    # 탐지기 값은 OBS-5가 AlphaBlock `OrderBlockParams()` 기본값으로 의도적으로 옮겼다.
     assert (s.swing_length, s.max_atr_mult, s.ob_end_method, s.combine_obs) == (
         10,
-        2.0,
+        3.5,
         "Wick",
-        True,
+        False,
     )
-    assert s.chart_max_order_blocks == 30
     assert (s.host, s.port, s.flask_env) == (
         "0.0.0.0",
         5000,
