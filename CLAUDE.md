@@ -96,6 +96,12 @@ tests/                  # pytest — 스모크 + 현행 동작 고정 특성 테
   `pip install -r requirements.txt`를 한 번 해야 cron·gunicorn이 뜬다.
 - 설정은 환경변수(`.env.example` 참고). API 키·시크릿은 코드에 하드코딩하지 않는다.
 
+- 🚨 **`daily_screening.sh`는 실행 비트(100755)로 커밋돼 있어야 한다(OBS-13)** — crontab이 스크립트를
+  직접 실행한다. 2026-09-30 서버를 git 체크아웃으로 바꿨을 때 644로 내려와 **2주간
+  `Permission denied`로 스크리닝이 안 돌았다**. `tests/test_structure.py`가 git 인덱스 모드를 건다.
+  수집이 실패하면 스크립트는 **종료 코드 1**로 끝나고 stderr에 한 줄 낸다(옛 코드는 무조건 `exit 0`).
+  서버 반영·crontab 대안은 `docs/ops/obs-13-daily-screening-permission.md`.
+
 - **차트는 Lightweight Charts 한 가지다(OBS-10)** — AlphaBlock과 같은 v5.2.0을 `static/vendor/`에
   벤더링하고 `static/js/ob_chart.js`가 캔들 + 존 박스(캔버스 프리미티브 **하나**) + RSI 보조창을
   그린다. 존마다 시리즈를 만들지 말 것(AlphaBlock에서 2,000개에 브라우저가 멈췄다). 순수 함수는

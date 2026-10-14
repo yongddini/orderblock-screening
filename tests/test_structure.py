@@ -192,14 +192,16 @@ def test_python_m_obscreen_help_runs() -> None:
     assert "obscreen collect" in res.stdout
 
 
-def _run_daily_script(tmp_path: Path, env_extra: dict[str, str]) -> str:
+def _run_daily_script(
+    tmp_path: Path, env_extra: dict[str, str], *, stub_exit: int = 0, expect_exit: int = 0
+) -> str:
     """`daily_screening.sh` 사본을 가짜 파이썬으로 돌려 어떤 파이썬이 무슨 인자로 불렸나 본다."""
     import os
     import shutil
 
     shutil.copy(REPO_ROOT / "daily_screening.sh", tmp_path / "daily_screening.sh")
     record = tmp_path / "called.txt"
-    stub = f'#!/bin/bash\necho "$0 $*" >> "{record}"\n'
+    stub = f'#!/bin/bash\necho "$0 $*" >> "{record}"\nexit {stub_exit}\n'
     venv_py = tmp_path / "venv310" / "bin" / "python3"
     venv_py.parent.mkdir(parents=True)
     venv_py.write_text(stub)
@@ -209,7 +211,16 @@ def _run_daily_script(tmp_path: Path, env_extra: dict[str, str]) -> str:
     other.chmod(0o755)
     env = {k: v for k, v in os.environ.items() if k != "OBSCREEN_PYTHON"}
     env.update({k: v.replace("{other}", str(other)) for k, v in env_extra.items()})
-    subprocess.run(["bash", str(tmp_path / "daily_screening.sh")], env=env, check=True)
+    res = subprocess.run(
+        ["bash", str(tmp_path / "daily_screening.sh")],
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert res.returncode == expect_exit, res.stderr
+    if expect_exit != 0:
+        assert "수집 실패" in res.stderr
     assert (tmp_path / "logs" / "screening.log").exists()
     return record.read_text()
 
@@ -223,3 +234,49 @@ def test_daily_script_uses_repo_venv310_by_default(tmp_path: Path) -> None:
 def test_daily_script_obscreen_python_overrides(tmp_path: Path) -> None:
     called = _run_daily_script(tmp_path, {"OBSCREEN_PYTHON": "{other}"})
     assert called.strip() == f"{tmp_path}/other-python -m obscreen collect"
+
+
+def test_daily_script_exits_nonzero_when_collect_fails(tmp_path: Path) -> None:
+    """OBS-13: 수집이 실패하면 종료 코드 1 — 옛 코드는 무조건 `exit 0`이라 실패가 안 보였다."""
+    called = _run_daily_script(tmp_path, {}, stub_exit=3, expect_exit=1)
+    assert called.strip() == f"{tmp_path}/venv310/bin/python3 -m obscreen collect"
+    log = (tmp_path / "logs" / "screening.log").read_text()
+    assert "❌ 데이터 수집 실패 (종료 코드 3)" in log
+    assert "✅ 데이터 수집 완료" not in log
+    # 실패해도 마무리(완료 표시)까지는 간다 — 중간에 죽은 것과 구분된다.
+    assert "스크리닝 완료" in log
+
+
+def test_daily_script_success_logs_completion(tmp_path: Path) -> None:
+    _run_daily_script(tmp_path, {})
+    log = (tmp_path / "logs" / "screening.log").read_text()
+    assert "✅ 데이터 수집 완료" in log
+    assert "수집 실패" not in log
+
+
+def test_daily_script_is_committed_executable() -> None:
+    """OBS-13: 실행 비트가 **저장소에** 있어야 한다 — crontab이 스크립트를 직접 실행한다.
+
+    2026-09-30 서버를 git 체크아웃으로 바꾸자 644로 커밋돼 있던 이 파일이 실행 권한 없이
+    내려와, cron이 2주간 `Permission denied`로 시작조차 못 했다. 작업 폴더의 권한이 아니라
+    git 인덱스의 모드를 본다(서버가 받는 것은 그쪽이다).
+    """
+    res = subprocess.run(
+        ["git", "ls-files", "-s", "--", "daily_screening.sh"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if res.returncode != 0 or not res.stdout.strip():
+        pytest.skip("git 체크아웃이 아니다(인덱스 모드를 읽을 수 없음)")
+    assert res.stdout.split()[0] == "100755", res.stdout
+
+
+def test_daily_script_runs_directly_without_bash_prefix(tmp_path: Path) -> None:
+    """작업 폴더 파일도 실행 가능하고 shebang으로 직접 돈다(crontab이 부르는 방식 그대로)."""
+    import os
+
+    script = REPO_ROOT / "daily_screening.sh"
+    assert os.access(script, os.X_OK)
+    assert script.read_text().startswith("#!/bin/bash\n")
