@@ -9,6 +9,7 @@ import importlib
 import os
 import sqlite3
 import sys
+from collections.abc import Iterable, Mapping
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -20,6 +21,48 @@ from obscreen.screening.screener import StockScreener
 
 #: 스크리닝·수급 결과를 쓰는 SQLite 경로. import 시점에 설정(`DB_PATH`)에서 한 번 읽는다.
 DB_PATH = get_settings().db_path
+
+# ── 추천 플래그(`is_recommended`) ─────────────────────────────────────────────
+# 저장과 과거 재현 측정(OBS-12)이 **같은 함수**로 판정한다 — 측정용으로 규칙을 다시 짜지 않는다.
+
+#: 📉 RSI과매도 비트 — 일봉 RSI < 30 · 지지 존 · 존 폭 < 10%.
+FLAG_RSI_OVERSOLD = 1
+#: 🔥 이중지지 비트 — 같은 날 같은 종목이 일봉·주봉 결과 양쪽 다 「지지」(존 겹침은 안 본다).
+FLAG_DUAL_SUPPORT = 2
+#: RSI과매도 기준(일봉 RSI 14, RMA) — 운영값.
+RSI_OVERSOLD_THRESHOLD = 30.0
+#: RSI과매도 배지의 존 폭 상한((top − bottom) / bottom, %).
+MAX_ZONE_WIDTH_PERCENT = 10.0
+
+
+def rsi_oversold_flag(row: Mapping[str, Any], rsi_threshold: float = RSI_OVERSOLD_THRESHOLD) -> int:
+    """스크리너 결과 한 행(일봉)의 RSI과매도 비트(`FLAG_RSI_OVERSOLD` 또는 0).
+
+    `rsi_threshold`는 측정(OBS-12)이 기준을 바꿔 보려고 연 인자다 — 운영은 기본값(30)만 쓴다.
+    """
+    zone_type = "지지" if row["OB_Type"] == "Bull" else "저항"
+    if (
+        row["RSI"] < rsi_threshold
+        and zone_type == "지지"
+        and row["OB_Top"] > 0
+        and row["OB_Bottom"] > 0
+    ):
+        ob_range_percent = ((row["OB_Top"] - row["OB_Bottom"]) / row["OB_Bottom"]) * 100
+        if ob_range_percent < MAX_ZONE_WIDTH_PERCENT:
+            return FLAG_RSI_OVERSOLD
+    return 0
+
+
+def dual_support_codes(
+    daily_rows: Iterable[Mapping[str, Any]], weekly_rows: Iterable[Mapping[str, Any]]
+) -> set[str]:
+    """일봉 결과·주봉 결과 양쪽에서 「지지」(Bull)인 종목 코드."""
+    weekly_support = {str(r["Code"]) for r in weekly_rows if r["OB_Type"] == "Bull"}
+    return {
+        str(r["Code"])
+        for r in daily_rows
+        if r["OB_Type"] == "Bull" and str(r["Code"]) in weekly_support
+    }
 
 
 def run_and_save_screening(target_date: str | None = None) -> None:
@@ -167,17 +210,7 @@ def run_and_save_screening(target_date: str | None = None) -> None:
             zone_type = "지지" if row["OB_Type"] == "Bull" else "저항"
             zone_position = "내부" if "내부" in row["Status"] else "근접"
 
-            is_recommended = 0
-            if (
-                row["RSI"] < 30
-                and zone_type == "지지"
-                and row["OB_Top"] > 0
-                and row["OB_Bottom"] > 0
-            ):
-                ob_range_percent = ((row["OB_Top"] - row["OB_Bottom"]) / row["OB_Bottom"]) * 100
-
-                if ob_range_percent < 10:
-                    is_recommended = 1
+            is_recommended = rsi_oversold_flag(row)
 
             conn.execute(
                 """
@@ -211,30 +244,18 @@ def run_and_save_screening(target_date: str | None = None) -> None:
     conn.commit()
 
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT d.code, d.is_recommended
-        FROM screening_results d
-        JOIN screening_results w ON d.code = w.code AND d.scan_date = w.scan_date
-        WHERE d.scan_date = ?
-        AND d.timeframe = 'daily' AND w.timeframe = 'weekly'
-        AND d.zone_type = '지지' AND w.zone_type = '지지'
-    """,
-        (today_str,),
-    )
-
-    dual_support_stocks = cursor.fetchall()
+    # 이중지지 — 판정은 `dual_support_codes` 한 곳(OBS-12가 과거 재현에서 같은 함수를 부른다).
+    dual_support_stocks = sorted(dual_support_codes(results_daily, results_weekly))
 
     if dual_support_stocks:
-        for code, existing_flag in dual_support_stocks:
-            new_flag = existing_flag | 2
+        for code in dual_support_stocks:
             cursor.execute(
                 """
                 UPDATE screening_results 
-                SET is_recommended = ? 
+                SET is_recommended = is_recommended | ? 
                 WHERE scan_date = ? AND code = ? AND timeframe = 'daily'
             """,
-                (new_flag, today_str, code),
+                (FLAG_DUAL_SUPPORT, today_str, code),
             )
         conn.commit()
         print(f"🔥 {len(dual_support_stocks)}개 종목이 일봉+주봉 모두 지지 (추천 추가)")

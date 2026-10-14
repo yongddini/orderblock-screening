@@ -29,3 +29,6 @@ backups/
 .DS_Store
 .idea/
 .vscode/
+
+# 측정 시세 캐시(OBS-12 — obscreen.research)
+.cache/

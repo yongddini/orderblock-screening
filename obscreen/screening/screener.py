@@ -144,75 +144,80 @@ class StockScreener:
         try:
             # 가격 데이터 가져오기
             df = KoreanStockDataProvider.get_price_data(ticker, days, end_date)
-
-            if df is None or len(df) < 50:
-                return None
-
-            # 거래정지 기간 제거 (거래량이 0인 날)
-            df = df[df["Volume"] > 0].copy()
-
-            if len(df) < 50:
-                return None
-
-            # 오더블록 감지 (AlphaBlock 탐지기, OBS-5)
-            detector = AlphaBlockOrderBlockDetector(
-                swing_length=self.swing_length,
-                max_atr_mult=self.max_atr_mult,
-                ob_end_method=self.ob_end_method,
-                combine_obs=self.combine_obs,
-            )
-            detector.detect_order_blocks_realtime(df)
-            # 방향별 최신 3개(AlphaBlock `zone_count="low"` — 주봉과 같은 규칙, OBS-5)
-            bull_obs, bear_obs = detector.get_latest_orderblocks()
-
-            # 현재가
-            current_price = df["Close"].iloc[-1]
-
-            # 금일 등락율 계산
-            prev_close = df["Close"].iloc[-2] if len(df) >= 2 else current_price
-            change_percent = (
-                ((current_price - prev_close) / prev_close * 100) if prev_close != 0 else 0
-            )
-
-            # RSI 계산 (14일) - RMA 방식
-            delta = df["Close"].diff()
-            gain = delta.where(delta > 0, 0)
-            loss = -delta.where(delta < 0, 0)
-
-            # RMA (Wilder's Smoothing) = EWM with alpha=1/length
-            alpha = 1.0 / 14
-            avg_gain = gain.ewm(alpha=alpha, adjust=False).mean()
-            avg_loss = loss.ewm(alpha=alpha, adjust=False).mean()
-
-            rs = avg_gain / avg_loss
-            rsi = 100 - (100 / (1 + rs))
-            current_rsi = rsi.iloc[-1]
-
-            # 거래대금 계산 (당일)
-            current_volume = df["Volume"].iloc[-1]
-            trading_value = current_volume * current_price  # 거래대금 = 거래량 × 현재가
-
-            # 위치 분류
-            position = self.classify_position(current_price, bull_obs, bear_obs)
-
-            if position["status"]:
-                return {
-                    "current_price": current_price,
-                    "change_percent": change_percent,
-                    "rsi": current_rsi,
-                    "trading_value": trading_value,  # 거래대금 추가
-                    "status": position["status"],
-                    "ob_type": position["ob_type"],
-                    "ob_top": position["ob_top"],
-                    "ob_bottom": position["ob_bottom"],
-                    "distance_percent": position["distance_percent"],
-                }
-
-            return None
+            return self.evaluate_daily_frame(df)
 
         except Exception as e:
             print(f"{ticker} 처리 중 오류: {str(e)}")
             return None
+
+    def evaluate_daily_frame(self, df: pd.DataFrame) -> dict[str, Any] | None:
+        """이미 받아 둔 일봉 창(`get_price_data`가 돌려준 모양) 하나로 근접도를 판정한다.
+
+        `check_proximity`의 조회 뒤 부분 그대로다 — 과거 재현 측정(OBS-12)이 같은 판정 코드를
+        그날까지의 창으로 부르려고 떼어 냈다. 예외는 호출부가 처리한다.
+        """
+        if df is None or len(df) < 50:
+            return None
+
+        # 거래정지 기간 제거 (거래량이 0인 날)
+        df = df[df["Volume"] > 0].copy()
+
+        if len(df) < 50:
+            return None
+
+        # 오더블록 감지 (AlphaBlock 탐지기, OBS-5)
+        detector = AlphaBlockOrderBlockDetector(
+            swing_length=self.swing_length,
+            max_atr_mult=self.max_atr_mult,
+            ob_end_method=self.ob_end_method,
+            combine_obs=self.combine_obs,
+        )
+        detector.detect_order_blocks_realtime(df)
+        # 방향별 최신 3개(AlphaBlock `zone_count="low"` — 주봉과 같은 규칙, OBS-5)
+        bull_obs, bear_obs = detector.get_latest_orderblocks()
+
+        # 현재가
+        current_price = df["Close"].iloc[-1]
+
+        # 금일 등락율 계산
+        prev_close = df["Close"].iloc[-2] if len(df) >= 2 else current_price
+        change_percent = ((current_price - prev_close) / prev_close * 100) if prev_close != 0 else 0
+
+        # RSI 계산 (14일) - RMA 방식
+        delta = df["Close"].diff()
+        gain = delta.where(delta > 0, 0)
+        loss = -delta.where(delta < 0, 0)
+
+        # RMA (Wilder's Smoothing) = EWM with alpha=1/length
+        alpha = 1.0 / 14
+        avg_gain = gain.ewm(alpha=alpha, adjust=False).mean()
+        avg_loss = loss.ewm(alpha=alpha, adjust=False).mean()
+
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+        current_rsi = rsi.iloc[-1]
+
+        # 거래대금 계산 (당일)
+        current_volume = df["Volume"].iloc[-1]
+        trading_value = current_volume * current_price  # 거래대금 = 거래량 × 현재가
+
+        # 위치 분류
+        position = self.classify_position(current_price, bull_obs, bear_obs)
+
+        if position["status"]:
+            return {
+                "current_price": current_price,
+                "change_percent": change_percent,
+                "rsi": current_rsi,
+                "trading_value": trading_value,  # 거래대금 추가
+                "status": position["status"],
+                "ob_type": position["ob_type"],
+                "ob_top": position["ob_top"],
+                "ob_bottom": position["ob_bottom"],
+                "distance_percent": position["distance_percent"],
+            }
+
+        return None
 
     def _is_near_orderblock(self, current_price: float, ob: OrderBlockInfo) -> bool:
         """
@@ -547,7 +552,13 @@ class StockScreener:
         """
         # 주봉 데이터 가져오기
         df = KoreanStockDataProvider.get_price_data_weekly(ticker, weeks, end_date)
+        return self.evaluate_weekly_frame(df)
 
+    def evaluate_weekly_frame(self, df: pd.DataFrame) -> dict[str, Any] | None:
+        """이미 받아 둔 주봉 창(`get_price_data_weekly`가 돌려준 모양) 하나로 근접도를 판정한다.
+
+        `check_proximity_weekly`의 조회 뒤 부분 그대로다(OBS-12 — `evaluate_daily_frame` 참고).
+        """
         if df is None or len(df) < 50:
             return None
 

@@ -76,6 +76,7 @@ obscreen/
   detect/orderblock.py # `OrderBlockInfo` — 스크리너·차트가 쓰는 존 자료구조
   screening/core.py    # 스크리닝 실행·DB 저장(오더블록 + 외국인/기관) — **유일한** run_and_save_screening
   screening/screener.py# 종목 스크리너(병렬)
+  research/            # 측정 도구(OBS-12) — 과거 재현 · 보유 기간 곡선(운영 경로 아님)
   web/app.py           # 조합 루트: create_app() · DB_PATH · 탐지기 클래스 · init_db()
   web/deps.py          # Blueprint가 조합 루트 전역을 **호출 시점에** 읽는 창구
   web/pages.py · screening_api.py · investor_api.py · chart_api.py   # Blueprint
@@ -151,6 +152,20 @@ tests/                  # pytest — 스모크 + 현행 동작 고정 특성 테
     (OBS-5 전에는 일봉만 잘라 주봉과 규칙이 달랐다).
   - 옛 탐지기 대비 변화는 `docs/obs-5-detector-change.md`(옛 스냅샷 ↔ 새 스냅샷에서 만든다 —
     `tests/test_obs5_change_table.py`가 둘이 맞는지 건다).
+
+- 📌 **측정 도구 = `obscreen/research/`(OBS-12)** — 지금 탐지기로 과거 각 영업일을 다시 돌려(walk-forward)
+  「이중지지 + RSI과매도」 보유 기간 곡선을 낸다: `uv run python -m obscreen.research.holding --start
+  2025-05-01` → `reports/obs12_holding_summary.md` + `reports/obs12_holding_signals.csv`(시세 캐시는
+  `.cache/obs12/`, git 제외 · 인터넷 필요).
+  - **규칙을 측정용으로 다시 짜지 않는다** — 판정은 운영과 같은 함수다:
+    `StockScreener.evaluate_daily_frame`·`evaluate_weekly_frame`(운영 `check_proximity*`가 조회 뒤 부르는
+    부분을 떼어 낸 것) · `core.rsi_oversold_flag`·`core.dual_support_codes`(운영 저장이 부르는 플래그
+    판정). 플래그 규칙을 바꾸려면 이 함수들을 고친다 — 저장과 측정이 함께 바뀐다.
+  - `tests/test_obs12_replay.py`가 ① 뒤쪽 시세를 잘라도 과거 신호가 안 바뀌는지(미래 차단) ② 같은 입력이면
+    `run_and_save_screening` 저장값과 `is_recommended`가 같은지 ③ 보유 수익이 신호일 뒤 봉만 쓰고 끝나지
+    않은 기간을 빼는지를 건다.
+  - ⚠️ 대상 종목은 「오늘 상장 종목 × 그날 종가 × 오늘 상장주식수」 근사다(과거 목록은 KRX 로그인 필요) —
+    생존 편향이 있고 리포트 머리에 적는다.
 
 - **차트는 Lightweight Charts 한 가지다(OBS-10)** — AlphaBlock과 같은 v5.2.0을 `static/vendor/`에
   벤더링하고 `static/js/ob_chart.js`가 캔들 + 존 박스(캔버스 프리미티브 **하나**) + RSI 보조창을
