@@ -4,6 +4,7 @@
 새로 뺀 값은 `OBSCREEN_` 접두사를 쓴다(`HOST`·`PORT` 같은 흔한 이름이 시스템 환경변수와
 부딪치지 않게). **기본값은 옮기기 전 코드에 박혀 있던 값과 같다** — 운영 결과가 바뀌면 안 된다
 (`tests/test_characterization_wiring.py`가 스크리너·탐지기에 넘어가는 값을 고정한다).
+예외: 탐지기 값은 OBS-5가 AlphaBlock 기본값으로 의도적으로 옮겼다(아래 「탐지기」).
 
 `get_settings()`는 부를 때마다 새로 읽는다. 옛 코드가 `SCREENING_TOP_N` 등을 호출 시점에
 `os.environ`에서 읽었으므로 그 성질을 지킨다(값이 바뀐 뒤 재시작 없이 cron이 새 값을 쓴다).
@@ -16,6 +17,8 @@ from zoneinfo import ZoneInfo
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from obscreen.detect.adapter import DEFAULT_PARAMS
 
 #: 한국시간 — 「오늘」·영업일 판단의 기준.
 KST = ZoneInfo("Asia/Seoul")
@@ -57,17 +60,21 @@ class Settings(BaseSettings):
     proximity_etf_daily: float = Field(1.0, validation_alias=_env("OBSCREEN_PROXIMITY_ETF_DAILY"))
     proximity_weekly: float = Field(5.0, validation_alias=_env("OBSCREEN_PROXIMITY_WEEKLY"))
 
-    # ── 탐지기 ────────────────────────────────────────────────────
-    swing_length: int = Field(10, validation_alias=_env("OBSCREEN_SWING_LENGTH"))
-    max_atr_mult: float = Field(2.0, validation_alias=_env("OBSCREEN_MAX_ATR_MULT"))
+    # ── 탐지기(AlphaBlock, OBS-5) ─────────────────────────────────
+    # 기본값은 AlphaBlock `OrderBlockParams()` 그대로다(`obscreen.detect.adapter.DEFAULT_PARAMS`).
+    # OBS-5가 옛 탐지기 값(ATR 배수 2.0 · 병합 켬)에서 의도적으로 옮겼다 — 국장 조정은 별도 이슈.
+    swing_length: int = Field(
+        DEFAULT_PARAMS.swing_length, validation_alias=_env("OBSCREEN_SWING_LENGTH")
+    )
+    max_atr_mult: float = Field(
+        DEFAULT_PARAMS.max_atr_mult, validation_alias=_env("OBSCREEN_MAX_ATR_MULT")
+    )
     ob_end_method: Literal["Wick", "Close"] = Field(
         "Wick", validation_alias=_env("OBSCREEN_OB_END_METHOD")
     )
-    combine_obs: bool = Field(True, validation_alias=_env("OBSCREEN_COMBINE_OBS"))
-    chart_max_order_blocks: int = Field(
-        30, validation_alias=_env("OBSCREEN_CHART_MAX_ORDER_BLOCKS")
+    combine_obs: bool = Field(
+        DEFAULT_PARAMS.combine_obs, validation_alias=_env("OBSCREEN_COMBINE_OBS")
     )
-    """차트 API가 탐지기에 넘기는 존 개수 상한."""
 
 
 def get_settings() -> Settings:

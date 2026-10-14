@@ -70,8 +70,10 @@ obscreen/
   collect.py           # 수집 본체(옛 collect_data.py — 인자·종료 코드 동일)
   data/provider.py     # 시세 조회(pykrx·FinanceDataReader)
   data/store.py        # SQLite 스키마(init_db)
-  detect/base.py       # 탐지기 프로토콜 — 리모델링 4(OBS-5)가 갈아끼울 자리
-  detect/realtime.py · orderblock.py · indicators.py   # 현행 탐지기·자료구조·지표
+  detect/base.py       # 탐지기 프로토콜(스크리너·차트가 기대는 면)
+  detect/alphablock/   # AlphaBlock 탐지기 **복사본**(OBS-5) — 손으로 고치지 말 것(아래)
+  detect/adapter.py    # 국장 OHLCV ↔ AlphaBlock 어댑터 · `AlphaBlockOrderBlockDetector`
+  detect/orderblock.py # `OrderBlockInfo` — 스크리너·차트가 쓰는 존 자료구조
   screening/core.py    # 스크리닝 실행·DB 저장(오더블록 + 외국인/기관) — **유일한** run_and_save_screening
   screening/screener.py# 종목 스크리너(병렬)
   web/app.py           # 조합 루트: create_app() · DB_PATH · 탐지기 클래스 · init_db()
@@ -86,12 +88,12 @@ tests/                  # pytest — 스모크 + 현행 동작 고정 특성 테
 ```
 
 - **루트의 옛 이름은 별칭이다** — `app_production`·`screening_core`·`stock_screener`·
-  `realtime_detector`·`orderblock_info`·`indicators`·`data_provider`·`collect_data`를 import하면
+  `orderblock_info`·`data_provider`·`collect_data`를 import하면
   `sys.modules`를 바꿔 끼워 **패키지 모듈 객체 자체**를 받는다. 그래서 gunicorn
   `app_production:app`·`python3 collect_data.py`·특성 테스트의 monkeypatch가 그대로 동작한다.
   **새 코드는 `obscreen.*`를 직접 import한다**(패키지 안에서 옛 이름을 쓰면 안 된다).
 - ⚠️ **모듈 전역을 import 시점에 복사하지 말 것** — 테스트는 `app_production.DB_PATH`·
-  `app_production.RealtimeOrderBlockDetector`를 바꿔 끼운다. Blueprint는 `obscreen.web.deps`로
+  `app_production.AlphaBlockOrderBlockDetector`를 바꿔 끼운다. Blueprint는 `obscreen.web.deps`로
   호출 시점에 읽는다(`from obscreen.web.app import DB_PATH`로 복사하면 조용히 옛 값을 쓴다).
 - 설정 기본값은 옮기기 전 코드의 숫자와 같다. 옛 환경변수 이름(`DB_PATH`·`SCREENING_TOP_N`·
   `SCREENING_ETF_N`·`FLASK_ENV`)은 그대로, 새 값은 `OBSCREEN_*`(`.env.example`).
@@ -133,6 +135,23 @@ tests/                  # pytest — 스모크 + 현행 동작 고정 특성 테
   영업일 수·`stale`·`warning`)가 화면 경고의 근거다 — 판단은 서버 한 곳에서만 한다. 옛 코드는 실패를
   삼켜 2026-08~09 두 달간 수집이 죽어 있는 것을 아무도 몰랐다.
 
+- 📌 **탐지기 = AlphaBlock 복사본(OBS-5 · 사용자 결정 「복사 이식」)** — `obscreen/detect/alphablock/`은
+  AlphaBlock `strategy/models.py`·`strategy/order_blocks.py`를 특정 커밋(`UPSTREAM_COMMIT`)에서
+  **그대로** 복사한 것이다(다른 것은 `order_blocks.py`의 import 한 줄). 국장 데이터 접점(날짜 인덱스
+  ↔ `open_time` ms, `OrderBlockInfo` 변환)은 `obscreen/detect/adapter.py`에만 둔다.
+  - **복사본을 손으로 고치지 않는다** — `tests/test_alphablock_parity.py`가 해시(항상)와 AlphaBlock
+    그 커밋 파일(로컬, `ALPHABLOCK_REPO` 기본 `~/AlphaBlock` — **읽기만** 한다, `git show`)로 대조하고,
+    원본 코드로 만든 골든(`tests/fixtures/alphablock_golden/`)과 존 대장이 완전히 같은지 CI에서도 건다.
+    AlphaBlock 수정을 받아들이는 갱신 절차는 `obscreen/detect/alphablock/__init__.py` 설명.
+  - **탐지 값의 기본값은 AlphaBlock `OrderBlockParams()`** — 스윙 10 · ATR(Wilder 10) 배수 3.5 ·
+    꼬리 무효화 · 병합 안 함 · 방향별 최신 3개(`zone_count="low"`). 설정·스크리너 기본값이
+    `adapter.DEFAULT_PARAMS`에서 나온다(숫자를 두 곳에 적지 않는다). 국장 조정은 별도 이슈.
+  - **스크리너·차트가 받는 존 = AlphaBlock 렌더 뷰**(마지막 봉 시점, 아직 소멸 안 한 존 중 방향별
+    최신 3개). 존 개수 규칙은 탐지기 한 곳에만 있다 — 스크리너·차트에서 `[:3]`로 다시 자르지 말 것
+    (OBS-5 전에는 일봉만 잘라 주봉과 규칙이 달랐다).
+  - 옛 탐지기 대비 변화는 `docs/obs-5-detector-change.md`(옛 스냅샷 ↔ 새 스냅샷에서 만든다 —
+    `tests/test_obs5_change_table.py`가 둘이 맞는지 건다).
+
 - **차트는 Lightweight Charts 한 가지다(OBS-10)** — AlphaBlock과 같은 v5.2.0을 `static/vendor/`에
   벤더링하고 `static/js/ob_chart.js`가 캔들 + 존 박스(캔버스 프리미티브 **하나**) + RSI 보조창을
   그린다. 존마다 시리즈를 만들지 말 것(AlphaBlock에서 2,000개에 브라우저가 멈췄다). 순수 함수는
@@ -145,7 +164,7 @@ tests/                  # pytest — 스모크 + 현행 동작 고정 특성 테
 4 탐지기 교체 → 5 서버 배포 변경. **아래층이 굳은 뒤 위층.**
 
 - **탐지기 = AlphaBlock 재사용.** 오더블록 탐지 로직은 `~/AlphaBlock`(암호화폐 자동매매 저장소)의
-  탐지기를 가져다 쓴다. 공유 방식(복사/패키지화)은 해당 이슈에서 사용자 확인 후 정한다.
+  탐지기를 가져다 쓴다. OBS-5가 **복사 이식**으로 옮겼다(위 📌 문단).
   ⚠️ `~/AlphaBlock`은 **읽기만** 한다 — 쓰기·브랜치 변경·프로세스 종료 금지(다른 자동 루틴이 돈다).
 - **웹 = 기존 도메인에서 Flask 유지**, 관리하기 쉽게 정리한다(프레임워크 교체 아님).
 - 탐지기를 바꾸기 전에 **현행 동작을 테스트로 먼저 고정**한다(리모델링 2).

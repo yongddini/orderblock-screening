@@ -25,6 +25,14 @@
     "combined": false,
     "start_time": 1781827200,
     "top": 374500.0
+   },
+   {
+    "bottom": 70700.0,
+    "break_time": 1757462400,
+    "breaker": true,
+    "combined": false,
+    "start_time": 1754611200,
+    "top": 72400.0
    }
   ],
   "bull": [

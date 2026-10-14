@@ -182,6 +182,12 @@ crontab -e     # ~/crontab.backup.<날짜> 의 daily_screening.sh 줄(과 필요
 
 `venv310/` 이 남아 있으므로 옛 유닛은 그대로 뜬다. `/etc/logrotate.d/obscreen` 은 남겨 둬도 무해하다.
 
+⚠️ **OBS-5(탐지기 교체) 이후 코드는 파이썬 3.11 이상에서만 돈다** — AlphaBlock 복사본이
+`enum.StrEnum`(3.11+)을 쓴다. venv310(3.10)으로 되돌리는 (b)는 OBS-5 **이전** 커밋에서만 성립한다
+(`./scripts/deploy.sh --ref <OBS-5 이전 커밋>`을 먼저 하거나, `.venv` 경로를 그대로 쓰는 (a)를 쓴다).
+`daily_screening.sh`를 유닛 밖에서 손으로 돌릴 때도 `OBSCREEN_PYTHON=.venv/bin/python`을 준다(안 주면
+venv310을 먼저 집는다).
+
 ## §8 DB 백업 · 복원
 
 ```bash
