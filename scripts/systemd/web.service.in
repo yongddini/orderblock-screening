@@ -1,0 +1,23 @@
+# Obscreen 웹(gunicorn) — OBS-6. scripts/install-systemd.sh 가 @…@ 자리를 채워 설치한다.
+# 직접 고치지 말고 템플릿을 고친 뒤 install-systemd.sh 를 다시 돌린다.
+[Unit]
+Description=Obscreen web (gunicorn app_production:app)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+@GROUP_LINE@
+WorkingDirectory=@REPO_DIR@
+# 비밀(KRX_ID·KRX_PW·DART_API_KEY)과 경로는 .env 에서 온다(파일이 없어도 뜬다).
+# 값은 `systemctl show` 에 나오지 않는다(EnvironmentFile 은 경로만 보인다).
+EnvironmentFile=-@REPO_DIR@/.env
+ExecStartPre=/bin/mkdir -p @LOG_DIR@
+# 바인드(@BIND@)는 옛 유닛과 같다 — 리버스 프록시(nginx) 설정을 건드리지 않기 위해서다.
+ExecStart=@VENV_BIN@/gunicorn --workers @WORKERS@ --bind @BIND@ --timeout 120 --access-logfile @LOG_DIR@/access.log --error-logfile @LOG_DIR@/web.log --capture-output app_production:app
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

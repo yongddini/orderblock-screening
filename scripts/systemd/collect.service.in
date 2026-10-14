@@ -1,0 +1,20 @@
+# Obscreen 매일 수집(daily_screening.sh) — OBS-6. @COLLECT_UNIT@.timer 가 부른다.
+# 실패(종료 코드 ≠ 0)는 `systemctl --failed` · `journalctl -u @COLLECT_UNIT@` 에 남는다.
+[Unit]
+Description=Obscreen daily screening collect (daily_screening.sh)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=@USER@
+@GROUP_LINE@
+WorkingDirectory=@REPO_DIR@
+EnvironmentFile=-@REPO_DIR@/.env
+# 수집 파이썬 = uv 가 만든 .venv. .env 에 OBSCREEN_PYTHON 이 있으면 그 값이 이긴다
+# (systemd 규칙: EnvironmentFile 값이 Environment= 를 덮는다).
+Environment=OBSCREEN_PYTHON=@VENV_BIN@/python
+# 실행 비트에 기대지 않는다(OBS-13: 9/30 git 전환 때 644로 내려와 2주간 안 돌았다).
+ExecStart=/bin/bash @REPO_DIR@/daily_screening.sh
+TimeoutStartSec=4h
+Nice=10

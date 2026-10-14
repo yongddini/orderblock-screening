@@ -2,8 +2,11 @@
 
 오더블록(Order Block) 기반 **국내주식 스크리닝 웹서비스**. 매일 장 마감 뒤 코스피·코스닥·ETF를
 스크리닝해 오더블록 근처 종목을 SQLite에 저장하고, Flask 웹 화면으로 보여 준다.
-서버는 `/home/rocky/orderblock`(gunicorn `app_production:app`는 `venv310` 가상환경 · 매일 20:05 KST cron
-`daily_screening.sh`).
+서버는 `/home/rocky/orderblock`(git 체크아웃 · nginx 뒤 gunicorn `app_production:app` · 매일 20:05 KST
+`daily_screening.sh`). OBS-6 이후 운영 표준은 **systemd**(웹 `orderblock.service` = `.venv` gunicorn ·
+수집 `obscreen-collect.timer`)이고 배포는 `./scripts/deploy.sh` 한 줄이다 — 런북
+[`docs/ops/obs-6-deploy.md`](docs/ops/obs-6-deploy.md). 서버 전환(§5)은 사용자가 하므로 그 전까지는
+옛 구성(`venv310` gunicorn · crontab)이 돌고 있을 수 있다.
 
 **이 저장소에서 Claude Code의 역할은 「개발자」다.** 완료 판단·상태 관리·다음 작업 제안은
 PM 러너가, 머지는 사용자가 한다.
@@ -75,7 +78,9 @@ obscreen/
   web/deps.py          # Blueprint가 조합 루트 전역을 **호출 시점에** 읽는 창구
   web/pages.py · screening_api.py · investor_api.py · chart_api.py   # Blueprint
 templates/ · static/    # Flask 템플릿·정적 파일(위치·URL 불변 — /static/...)
-daily_screening.sh      # 서버 cron — 스크립트 폴더 기준으로 돈다(경로 하드코딩 없음)
+daily_screening.sh      # 매일 수집 — 스크립트 폴더 기준으로 돈다(경로 하드코딩 없음)
+scripts/                # 서버 운영(OBS-6): deploy.sh · install-systemd.sh · server-inventory.sh ·
+                        #   health-check.sh · db-backup.sh · lib/common.sh · systemd/*.in(유닛 템플릿)
 app_production.py 등    # 호환 별칭(아래)
 tests/                  # pytest — 스모크 + 현행 동작 고정 특성 테스트(OBS-3, tests/README.md)
 ```
@@ -90,11 +95,28 @@ tests/                  # pytest — 스모크 + 현행 동작 고정 특성 테
   호출 시점에 읽는다(`from obscreen.web.app import DB_PATH`로 복사하면 조용히 옛 값을 쓴다).
 - 설정 기본값은 옮기기 전 코드의 숫자와 같다. 옛 환경변수 이름(`DB_PATH`·`SCREENING_TOP_N`·
   `SCREENING_ETF_N`·`FLASK_ENV`)은 그대로, 새 값은 `OBSCREEN_*`(`.env.example`).
-- 의존성은 `pyproject.toml` + `uv.lock`이 정본이다. `requirements.txt`는 서버 배포가 아직 쓰므로
-  리모델링 5(배포)까지 남겨 둔다.
+- 의존성은 `pyproject.toml` + `uv.lock`이 정본이다. 배포(OBS-6)는 `uv sync --frozen --no-dev`로
+  `.venv`(파이썬 3.11)를 만든다. `requirements.txt`는 **서버가 systemd 전환(런북 §5)을 끝내고 안정될
+  때까지** 남긴다 — 전환 전 `venv310` 경로와 롤백(§7b)이 아직 쓴다.
   ⚠️ OBS-4가 `pydantic-settings`를 더했다(두 파일 모두) — 서버는 이 커밋을 받은 뒤
   `pip install -r requirements.txt`를 한 번 해야 cron·gunicorn이 뜬다.
 - 설정은 환경변수(`.env.example` 참고). API 키·시크릿은 코드에 하드코딩하지 않는다.
+
+- 📌 **운영 스크립트(OBS-6)** — 서버 작업은 전부 `scripts/`의 셸 스크립트 + 런북으로 넘긴다(로컬에서
+  SSH 불가). 지키는 것:
+  - **서버 경로를 쓰지 않는다** — 저장소 위치는 `scripts/lib/common.sh`가 자기 위치에서 구하고, systemd
+    유닛은 `scripts/systemd/*.in` 템플릿의 `@REPO_DIR@` 등을 `install-systemd.sh`가 채운다
+    (`test_no_hardcoded_server_path_in_code_or_scripts`가 `.in`·`.timer`도 본다).
+  - **nginx·도메인·TLS는 읽기만 한다** — 새 웹 유닛은 기존 유닛의 gunicorn `--bind`를 그대로 옮긴다.
+  - **수집 유닛은 `/bin/bash daily_screening.sh`로 부른다**(실행 비트에 기대지 않음 — OBS-13 사고).
+    운영 스크립트도 실행 비트(100755)로 커밋한다(`tests/test_ops_scripts.py`가 인덱스 모드를 건다).
+  - **비밀은 `.env`(chmod 600) 하나** — 유닛이 `EnvironmentFile`로 읽어 pykrx(`KRX_ID`·`KRX_PW`)까지
+    전달된다. 점검·설치 출력은 `mask_secrets`로 값을 가린다.
+  - **crontab과 timer가 동시에 돌지 않게** — `install-systemd.sh`는 crontab에 `daily_screening.sh`
+    활성 줄이 있으면 타이머를 켜지 않고 멈춘다.
+  - 셸 스크립트는 `bash -n` + **shellcheck(`-S warning`, dev 의존성 `shellcheck-py`)** 를 통과해야
+    한다(pytest가 건다). `deploy.sh`는 가짜 `uv`·`sudo`·`systemctl`·`curl`로 호출 순서·실패 시 멈춤을
+    테스트한다 — 새 단계를 넣으면 그 테스트도 고친다.
 
 - 🚨 **`daily_screening.sh`는 실행 비트(100755)로 커밋돼 있어야 한다(OBS-13)** — crontab이 스크립트를
   직접 실행한다. 2026-09-30 서버를 git 체크아웃으로 바꿨을 때 644로 내려와 **2주간

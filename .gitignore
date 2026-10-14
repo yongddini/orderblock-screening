@@ -17,6 +17,9 @@ __pycache__/
 logs/
 *.log
 
+# 운영 백업(OBS-6 — scripts/db-backup.sh · install-systemd.sh 의 유닛 백업)
+backups/
+
 # 비밀 설정
 .env
 .env.*

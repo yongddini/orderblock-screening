@@ -1,0 +1,14 @@
+# Obscreen 로그 회전 — OBS-6. scripts/install-systemd.sh 가 /etc/logrotate.d/obscreen 으로 설치한다.
+# 로그는 한 곳(@LOG_DIR@)에 모인다: web.log · access.log(gunicorn) · screening.log(매일 수집).
+@LOG_DIR@/*.log {
+    su @USER@ @GROUP@
+    daily
+    rotate 30
+    dateext
+    compress
+    delaycompress
+    missingok
+    notifempty
+    # gunicorn·daily_screening.sh 는 파일을 append 로 열어 둔다 — 잘라내기 방식이 재시작 없이 안전하다.
+    copytruncate
+}
